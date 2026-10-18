@@ -6,7 +6,6 @@ import { computed } from 'vue'
 import { AuditTable } from '@vex/platform-web/vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
-import AuditActor from '@/components/AuditActor.vue'
 import ManageShell from '@/components/ManageShell.vue'
 import OwnChannelCard from '@/components/OwnChannelCard.vue'
 import { can, isAdmin, rankIn } from '@/lib/access'
@@ -81,7 +80,6 @@ const down = computed(() =>
       <section>
         <h2 class="vx-eyebrow sec">Recent changes</h2>
         <AuditTable :entries="data.audit" :scope-names="Object.fromEntries(data.channels.map((c) => [c.channel_id, c.login]))" empty="Nothing changed yet.">
-          <template #actor="{ entry }"><AuditActor :entry="entry" /></template>
         </AuditTable>
         <div class="row"><RouterLink to="/manage/audit" class="vx-btn">All changes</RouterLink></div>
       </section>

@@ -7,7 +7,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { AuditTable } from '@vex/platform-web/vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
-import AuditActor from '@/components/AuditActor.vue'
 import ManageShell from '@/components/ManageShell.vue'
 import OwnChannelCard from '@/components/OwnChannelCard.vue'
 import MyCommandsTab from '@/components/manage/MyCommandsTab.vue'
@@ -93,7 +92,6 @@ const moderated = computed(() =>
       </VxCallout>
       <div v-else-if="!data" class="loading" aria-busy="true"><VxSkeleton v-for="i in 4" :key="i" h="38px" /></div>
       <AuditTable v-else :entries="data" empty="Nothing changed yet.">
-        <template #actor="{ entry }"><AuditActor :entry="entry" /></template>
       </AuditTable>
     </section>
   </ManageShell>

@@ -5,7 +5,6 @@ import { AuditBrowser, type AuditFilters } from '@vex/platform-web/vue'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useResource } from '@vex/ui/utils'
-import AuditActor from '@/components/AuditActor.vue'
 import ManageShell from '@/components/ManageShell.vue'
 import '@/components/manage/tabs.css'
 import { admin } from '@/lib/admin'
@@ -45,7 +44,6 @@ const filters = computed<AuditFilters>({
       action-hint="cc. or cc.edit"
       target-hint="exact, or a prefix:"
     >
-      <template #actor="{ entry }"><AuditActor :entry="entry" /></template>
     </AuditBrowser>
   </ManageShell>
 </template>

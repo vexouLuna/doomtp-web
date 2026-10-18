@@ -10,7 +10,6 @@ import ManageShell from '@/components/ManageShell.vue'
 import ChannelSettings from '@/components/ChannelSettings.vue'
 import ChatLine from '@/components/ChatLine.vue'
 import { AuditBrowser } from '@vex/platform-web/vue'
-import AuditActor from '@/components/AuditActor.vue'
 import BackfillPanel from '@/components/manage/BackfillPanel.vue'
 import ChatLogTab from '@/components/manage/ChatLogTab.vue'
 import FilterTab from '@/components/manage/FilterTab.vue'
@@ -234,7 +233,6 @@ async function part() {
       <section v-else-if="tab === 'audit'">
         <p class="vx-muted intro">Every change made here, in chat, on this site or with an API key.</p>
         <AuditBrowser :client="platform" :scope="data.channel.channel_id" action-hint="cc. or cc.edit" target-hint="exact, or a prefix:">
-          <template #actor="{ entry }"><AuditActor :entry="entry" /></template>
         </AuditBrowser>
       </section>
       <IgnoredTab v-else-if="tab === 'ignored'" :login="login" :sign="sign" :ignored="data.ignored" :reload="reload" />
