@@ -7,7 +7,7 @@
 // or the whole page shows that way. Moderation names a moderator only when a moderator ticks "Show moderators". On the
 // public channel page (`public`) it has no moderation, which the bot leaves out for the public, and no coverage. A
 // chatter's name opens their user card.
-import { loadBadges, loadChannelEmotes, removalNote, toChatLine, type ChatLine as Line, type EmoteSet, type LogEntry, type RawBadges } from '@vex/platform-web/chat'
+import { loadBadges, loadChannelEmotes, pairRedemptions, removalNote, toChatLine, type ChatLine as Line, type EmoteSet, type LogEntry, type RawBadges } from '@vex/platform-web/chat'
 import { ChatLine, UserCard } from '@vex/platform-web/vue'
 import { VxButton, VxCallout, VxCheckbox, VxEmptyState, VxField, VxInput, VxSelect, VxSkeleton } from '@vex/ui'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
@@ -160,7 +160,8 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', clearOutside))
 const A_MODERATOR = { id: '', login: null, display_name: 'A moderator' }
 const unnamed = (e: RawEntry): RawEntry => (e.kind === 'moderation' && e.moderator ? { ...e, moderator: A_MODERATOR } : e)
 const lines = computed(() =>
-  ((data.value?.items ?? []) as RawEntry[]).map((e) => {
+  // A redeem with a message shows once, as that message with its reward.
+  pairRedemptions((data.value?.items ?? []) as RawEntry[]).map((e) => {
     const hideMod = e.kind === 'moderation' && !showMods.value
     const line = toChatLine(hideMod ? unnamed(e) : e, emotes.value, badges.value)
     const hidden = !!line.removed && asked.value.removed !== 'text' && !revealed.value.has(line.id)
