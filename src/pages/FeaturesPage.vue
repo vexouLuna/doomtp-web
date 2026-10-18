@@ -26,7 +26,7 @@ const publishReply = computed(() =>
   [
     `${p.value}cc publish count`,
     `> published "count" (by @you) as ${p.value}count here. Mods can ${p.value}cc disable count.`,
-    '> ⚠ count writes channel.deaths — those writes are denied until a mod allows them:',
+    '> ⚠ count writes channel.deaths; those writes are denied until a mod allows them:',
     `>   ${p.value}cc grant count channel.deaths.`,
   ].join('\n'),
 )
@@ -88,13 +88,12 @@ function roleSource(name: string): string {
         </table>
       </div>
       <p>
-        <strong>Results carry three things:</strong> an exit code, a message (what chat sees) and data (structured values
+        Each result carries an exit code, a message (what chat sees) and data (structured values
         other commands can read as <code>{_1}</code>, <code>{_1[user]}</code>). Failure codes are documented in the
         <RouterLink to="/docs/language">language reference</RouterLink>.
       </p>
       <p>
-        A line runs at most <strong>8 commands</strong>, and nothing runs at all if any part of it fails a check first:
-        a line either goes through as a whole or does nothing.
+        A line runs at most <strong>8 commands</strong>. If any part of it fails a check first, none of it runs.
       </p>
 
       <h2 id="permissions" class="vx-display">Roles and permissions</h2>
@@ -118,8 +117,7 @@ function roleSource(name: string): string {
         rank with <Cmd t="perm allow" />.
       </p>
       <p class="vx-muted">
-        A denial is silent. The bot doesn't announce that you can't use something; a channel can configure an
-        <code>on_denied</code> callback if it wants a reply.
+        A denial is silent. A channel that wants a reply can set an <code>on_denied</code> callback.
       </p>
 
       <h2 id="cooldowns" class="vx-display">Cooldowns</h2>
@@ -171,8 +169,8 @@ function roleSource(name: string): string {
       <p>
         <strong>Edits are live.</strong> When you edit a command, every channel and every person using it gets the new
         version immediately. There is no pinning and no approval step, so linking or publishing someone else's command
-        always answers with a warning saying exactly that. A channel isn't left guessing: <Cmd t="cc info" /> says when a
-        command changed since the version this channel last ran, and a channel that turns edit notices on hears it in
+        always answers with a warning saying exactly that. <Cmd t="cc info" /> says when a command changed since the
+        version this channel last ran, and a channel that turns edit notices on hears it in
         chat the first time a run picks the change up.
       </p>
       <p>
@@ -358,13 +356,13 @@ function roleSource(name: string): string {
       <h2 id="logging" class="vx-display">Chat log and history</h2>
       <p>
         Every message is written to a searchable log (full-text). <strong>Nothing is ever deleted:</strong> a deleted
-        message keeps its row and gains a deletion time, so the record of what happened stays honest. Timeouts, bans and
+        message keeps its row and gains a deletion time, so the log still shows what was said. Timeouts, bans and
         chat clears are stored as events of their own.
       </p>
       <p>
         Coverage is recorded too: the log knows exactly when the bot was listening. If the bot was down, the gap can be
         filled from the public recent-messages service when a channel opts in, and anything that can't be proven complete
-        is marked partial rather than quietly called whole. <strong>Backfilled messages never run commands</strong>:
+        is marked partial. <strong>Backfilled messages never run commands</strong>:
         they only go to the log.
       </p>
       <p>Opting in is the broadcaster's call and nothing happens until they make it:</p>
@@ -390,8 +388,8 @@ function roleSource(name: string): string {
 
       <h2 id="channels" class="vx-display">Channels and onboarding</h2>
       <p>
-        A broadcaster types <Cmd t="join" /> in the bot's own chat, and the bot starts reading and replying in theirs, no
-        authorization needed for that. More becomes possible as trust grows:
+        A broadcaster types <Cmd t="join" /> in the bot's own chat, and the bot starts reading and replying in theirs. That
+        needs no authorization. More becomes possible as trust grows:
       </p>
       <div class="table-scroll">
         <table class="vx-table">
@@ -425,7 +423,7 @@ function roleSource(name: string): string {
         placeholders and types from the bot itself. Nothing there runs or is sent to chat.
       </p>
       <p>
-        Shows how each name resolved (built-in, published, or your alias, with the author and version), your rank
+        The report shows how each name resolved (built-in, published, or your alias, with the author and version), your rank
         against what each command requires, both cooldowns with the time remaining, which placeholders exist in that
         context, and the first check that would fail. <code>--run</code> also evaluates it, with variable writes
         discarded, cooldowns untouched and nothing sent to chat.
