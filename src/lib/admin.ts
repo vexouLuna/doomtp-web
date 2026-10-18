@@ -1,8 +1,8 @@
 // The managing half of the bot's JSON API (ADR-0016, ADR-0026): the session, a channel's settings and logs, and
 // the bot's own. Every call needs the session cookie; writes also send its CSRF token (see `auth` in api.ts).
 import type { ChannelCommand, CommandRulePatch } from './modules'
-import type { AuditOut } from '@vexoulz/platform-web'
-import type { LogCoverage, LogEntry, LogQuery } from '@vexoulz/platform-web/chat'
+import type { AuditOut } from '@vex/platform-web'
+import type { LogCoverage, LogEntry, LogQuery } from '@vex/platform-web/chat'
 import { request, type CustomCommand, type ExplainReport, type Publication } from './api'
 
 const json = (method: string, body?: unknown): RequestInit => ({
@@ -55,7 +55,10 @@ export interface ApiKey {
   last_used_at: number | null
 }
 
+export type SlurLevel = 'base' | 'strict' | 'strictest'
+
 export interface Channel {
+
   channel_id: string
   login: string
   active: boolean
@@ -70,6 +73,11 @@ export interface Channel {
   /** Anyone may search the chat log while this and `log_enabled` are on; off, only moderators can. Older bots
    *  don't send it. */
   public_log?: boolean
+  /** Off: the bot stays in chat and keeps logging but never says anything. Older bots don't send it. */
+  bot_enabled?: boolean
+  /** How much of the built-in slur list applies to what the bot says; `base` always does. Older bots don't
+   *  send it. */
+  slur_filter?: SlurLevel
   quiet_errors: boolean
   cc_edit_notice: boolean
   reply_hold_ms: number
@@ -83,6 +91,8 @@ export type ChannelPatch = Partial<{
   log_enabled: boolean
   history_backfill: boolean
   public_log: boolean
+  bot_enabled: boolean
+  slur_filter: SlurLevel
   reply_hold_ms: number
   timezone: string
   automod_action: string
@@ -268,7 +278,15 @@ export interface Run {
 }
 
 // The log's shapes (/api/v2/channels/{login}/log, ADR-0027) are the shared chat library's.
-export type { LogCoverage, LogEntry, LogQuery, LogUser } from '@vexoulz/platform-web/chat'
+export type { LogCoverage, LogEntry, LogQuery, LogUser } from '@vex/platform-web/chat'
+
+/** A log entry's row as the bot stored it (`raw=true`): EventSub's event, the IRC line as `{ line }`, or a rebuild of
+ *  a row from before raw events were kept. Older bots leave it out. */
+export interface RawRow {
+  format: 'eventsub' | 'irc' | 'legacy' | null
+  data: Record<string, unknown> | null
+}
+export type RawEntry = LogEntry & { raw?: RawRow | null }
 
 /** A host `http get` may fetch; the secret shows its kind and name, never its value. */
 export interface HttpHost {
@@ -378,7 +396,7 @@ export const admin = {
   runs: (login: string, limit = 50) => request<{ runs: Run[] }>(`${at(login)}/runs?limit=${limit}`),
   /** The channel's log as one timeline (/api/v2), newest first unless `order` says; pass `next_cursor` back as
    *  `cursor`, with the same filters, for the page after. */
-  log: (login: string, query: LogQuery = {}) => {
+  log: (login: string, query: LogQuery & { raw?: boolean } = {}) => {
     const params = new URLSearchParams()
     for (const [k, v] of Object.entries(query)) {
       if (Array.isArray(v)) for (const one of v) params.append(k, one)

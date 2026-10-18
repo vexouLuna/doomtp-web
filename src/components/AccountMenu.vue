@@ -1,11 +1,11 @@
 <script setup lang="ts">
 // The header's account control. One sign-in: when the bot offers Twitch sign-in, "Sign in" goes through the bot,
-// which (with the vexoulz account as its provider, ADR-0023) signs in to the account and makes the bot session in
+// which (with the vexoul.net account as its provider, ADR-0023) signs in to the account and makes the bot session in
 // one trip. Otherwise it's the shared account alone (src/lib/account.ts). Signing out ends both. It goes by the real
 // session, so an admin viewing the site as someone else still sees themselves here, and "View as…".
-import { VxAccountMenu, VxMenuItem } from '@vexoulz/ui'
-import type { AccountUser } from '@vexoulz/ui'
-import { useAccount } from '@vexoulz/ui/account'
+import { VxAccountMenu, VxMenuItem, VxTwitchGlyph } from '@vex/ui'
+import type { AccountUser } from '@vex/ui'
+import { useAccount } from '@vex/ui/account'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { logout, mayViewAs, realSession as session, twitchLoginUrl } from '@/lib/session'
@@ -52,6 +52,7 @@ async function signOut() {
     @sign-out="signOut"
   >
     <template #default="{ close }">
+      <VxMenuItem v-if="session.authenticated" to="/manage" @click="close()"><VxTwitchGlyph class="mark" /> Manage</VxMenuItem>
       <VxMenuItem v-if="session.authenticated" to="/manage/me" @click="close()">Your commands &amp; channel</VxMenuItem>
       <VxMenuItem v-if="mayViewAs()" @click="close(); picker.open = true">View as…</VxMenuItem>
       <slot :close="close"></slot>

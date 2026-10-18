@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { VxButton, VxCallout, VxSkeleton } from '@vexoulz/ui'
+import { VxButton, VxCallout, VxSkeleton, VxToc } from '@vex/ui'
 import { computed, onMounted } from 'vue'
-import { useResource } from '@vexoulz/ui/utils'
-import { errorText } from '@vexoulz/platform-web'
+import { useResource } from '@vex/ui/utils'
+import { errorText } from '@vex/platform-web'
 import ChatLine from '@/components/ChatLine.vue'
 import Cmd from '@/components/Cmd.vue'
 import DtpShell from '@/components/DtpShell.vue'
@@ -31,7 +31,7 @@ onMounted(() => {
 const REFERENCES = [
   ['{_1}, {_2}', 'the result of an earlier command in the same line'],
   ['{_}', 'the previous result'],
-  ['{_1[celsius]}', "a key of that result's data"],
+  ['{_1[user]}', "a key of that result's data (each command's data is listed with it)"],
   ['{arg.1}, {arg.2+}, {arg.name}', 'arguments, inside a custom command or trigger'],
   ['{$chatter.display}, {$channel.name}', "who and where: the bot's own fields start with $"],
   ['{channel.deaths}, {channel.stats[kills]}', 'variables; brackets go into a stored list or map'],
@@ -64,6 +64,8 @@ const limits = computed(() => {
 
 <template>
   <DtpShell>
+    <div class="vx-toc-layout">
+    <VxToc />
     <article class="doc">
       <h1 class="vx-display">Language reference</h1>
       <p class="vx-muted">
@@ -246,6 +248,7 @@ const limits = computed(() => {
         </template>
       </template>
     </article>
+    </div>
   </DtpShell>
 </template>
 
