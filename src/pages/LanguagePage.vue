@@ -114,7 +114,7 @@ const limits = computed(() => {
         <p class="list">
           <template v-for="(op, i) in data.language.operators.filter((o) => o !== ';')" :key="op"><template v-if="i"> · </template><code>{{ op }}</code></template>
         </p>
-        <p><code>;</code> is reserved: it is rejected with a clear error rather than doing something surprising.</p>
+        <p><code>;</code> is reserved: it is rejected with a clear error.</p>
 
         <h2 class="vx-display">Placeholders</h2>
         <p>
