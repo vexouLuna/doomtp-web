@@ -109,7 +109,7 @@ function roleSource(name: string): string {
       </div>
       <p>
         <strong>Results carry three things:</strong> an exit code, a message (what chat sees) and data (structured values
-        other commands can read as <code>{_1}</code>, <code>{_1[celsius]}</code>). Failure codes are documented in the
+        other commands can read as <code>{_1}</code>, <code>{_1[user]}</code>). Failure codes are documented in the
         <RouterLink to="/docs/language">language reference</RouterLink>.
       </p>
       <p>
