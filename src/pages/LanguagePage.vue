@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { VxButton, VxCallout, VxSkeleton } from '@vex/ui'
+import { VxButton, VxCallout, VxSkeleton, VxToc } from '@vex/ui'
 import { computed, onMounted } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -64,6 +64,8 @@ const limits = computed(() => {
 
 <template>
   <DtpShell>
+    <div class="vx-toc-layout">
+    <VxToc />
     <article class="doc">
       <h1 class="vx-display">Language reference</h1>
       <p class="vx-muted">
@@ -197,6 +199,7 @@ const limits = computed(() => {
         </template>
       </template>
     </article>
+    </div>
   </DtpShell>
 </template>
 

@@ -3,7 +3,7 @@
 // clicking it opens the details underneath (arguments, cooldowns, examples, a custom command's body).
 // On a phone the columns stack inside each row instead of being dropped. The Manage pages add their controls to each
 // line (the `actions` slot), a note under the summary (`note`) and more details (`detail`).
-import { VxChip, VxInput } from '@vex/ui'
+import { VxButton, VxChip, VxInput } from '@vex/ui'
 import { computed, ref, useSlots } from 'vue'
 import { type CommandRow, filterRows } from '@/lib/commands'
 import ChatLine from './ChatLine.vue'
@@ -20,6 +20,22 @@ const count = computed(() => {
   const n = shown.value.length
   return `${n} ${n === 1 ? props.noun.replace(/s$/, '') : props.noun}`
 })
+/** The commands by module, in the order modules first appear. Each module's block can be folded away. */
+const groups = computed(() => {
+  const by = new Map<string, CommandRow[]>()
+  for (const row of shown.value) by.set(row.module, [...(by.get(row.module) ?? []), row])
+  return [...by].map(([module, items]) => ({ module, items }))
+})
+const folded = ref(new Set<string>())
+/** While searching, every module with a match stays open, so nothing found is hidden. */
+const isFolded = (module: string) => !query.value && folded.value.has(module)
+function fold(module: string) {
+  const next = new Set(folded.value)
+  if (!next.delete(module)) next.add(module)
+  folded.value = next
+}
+const allFolded = computed(() => groups.value.length > 0 && groups.value.every((g) => folded.value.has(g.module)))
+const foldAll = () => (folded.value = allFolded.value ? new Set() : new Set(groups.value.map((g) => g.module)))
 const open = ref(new Set<string>())
 function toggle(key: string) {
   const next = new Set(open.value)
@@ -40,6 +56,7 @@ function toggle(key: string) {
         @keydown.esc="query = ''"
       />
       <span class="vx-muted vx-mono count" aria-live="polite">{{ count }}</span>
+      <VxButton size="sm" :disabled="!!query" @click="foldAll">{{ allFolded ? 'Expand all' : 'Collapse all' }}</VxButton>
     </div>
 
     <div class="table vx-panel" role="table" :aria-label="`${noun}, ${count}`">
@@ -50,7 +67,20 @@ function toggle(key: string) {
         </div>
         <span v-if="slots.actions" class="actions vx-eyebrow" role="columnheader">{{ actionsLabel }}</span>
       </div>
-      <div v-for="row in shown" :key="row.key" class="item" :class="{ 'is-open': open.has(row.key) }" role="rowgroup">
+      <template v-for="g in groups" :key="g.module">
+      <button
+        type="button"
+        class="group"
+        :aria-expanded="!isFolded(g.module)"
+        :aria-label="`${g.module} module, ${g.items.length} ${g.items.length === 1 ? 'command' : 'commands'}`"
+        @click="fold(g.module)"
+      >
+        <span class="chev" aria-hidden="true">{{ isFolded(g.module) ? '▸' : '▾' }}</span>
+        <span class="vx-mono gname">{{ g.module }}</span>
+        <span class="vx-muted vx-mono gcount">{{ g.items.length }}</span>
+      </button>
+      <template v-if="!isFolded(g.module)">
+      <div v-for="row in g.items" :key="row.key" class="item" :class="{ 'is-open': open.has(row.key) }" role="rowgroup">
         <div class="line">
           <button
             type="button"
@@ -59,11 +89,11 @@ function toggle(key: string) {
             :aria-expanded="open.has(row.key)"
             @click="toggle(row.key)"
           >
-            <ChatLine class="name" :class="{ internal: row.internal }" role="cell" :lines="row.internal ? row.usage : `${sign}${row.usage}`" :sign="sign" />
+            <ChatLine class="name" :class="{ internal: row.internal }" role="cell" :lines="row.internal ? row.usage : `${sign}${row.usage}`" :sign="sign" signature />
             <span class="vx-muted module" role="cell">{{ row.module }}</span>
             <span role="cell">
-              <VxChip v-if="row.internal" title="Only this pack's own commands call it; chat can't type it">internal</VxChip>
-              <VxChip v-else :tone="row.role === 'everyone' ? 'default' : 'accent'">{{ row.role }}</VxChip>
+              <VxChip v-if="row.internal" tone="warn" class="tag-internal" title="Only this pack's own commands call it; chat can't type it">⚙ internal</VxChip>
+              <VxChip v-else :tone="row.role === 'everyone' ? 'ok' : 'accent'">{{ row.role }}</VxChip>
             </span>
             <span class="summary" role="cell">{{ row.summary }}<span v-if="slots.note" class="note"><slot name="note" :row="row"></slot></span></span>
           </button>
@@ -103,9 +133,16 @@ function toggle(key: string) {
             </table>
           </div>
           <slot name="detail" :row="row"></slot>
-          <pre v-if="row.examples.length" class="vx-code"><template v-for="(e, i) in row.examples" :key="i"><template v-if="i">{{ '\n' }}</template><ChatLine :lines="e.invocation" :sign="sign" /><template v-if="e.output">{{ '\n  → ' }}{{ e.output }}</template></template></pre>
+          <div v-if="row.examples.length" class="examples">
+            <div v-for="(e, i) in row.examples" :key="i">
+              <ChatLine :lines="e.invocation" :sign="sign" block />
+              <p v-if="e.output" class="out vx-mono">→ {{ e.output }}</p>
+            </div>
+          </div>
         </div>
       </div>
+      </template>
+      </template>
       <p v-if="!shown.length" class="vx-muted empty">Nothing matches that.</p>
     </div>
   </div>
@@ -144,14 +181,26 @@ button.row { cursor: pointer; }
 /* Beats the pages' inline-code pill (.doc code): the name is the row, not a snippet in text. */
 .name { font-family: var(--vx-font-mono); font-size: 13px; overflow-wrap: anywhere; padding: 0; background: none; border: 0; }
 .module { font-size: 13px; }
-.name.internal { color: var(--vx-muted); }
+.name.internal { color: var(--vx-muted); font-style: italic; }
+/* Two tags that must not blur together: a rank is a solid pill (green for everyone, accent for the rest); an
+   internal command is amber, dashed and gear-marked, because nobody can type it. */
+.tag-internal { border-style: dashed; background: none; }
+.group {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 14px; cursor: pointer;
+  background: rgb(255 255 255 / 0.035); border: 0; border-bottom: 1px solid var(--vx-line); color: var(--vx-ink); font: inherit; text-align: left;
+}
+.group:hover { background: rgb(255 255 255 / 0.07); }
+.chev { width: 1em; color: var(--vx-accent); }
+.gname { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; }
+.gcount { font-size: 11px; }
+.examples { display: flex; flex-direction: column; gap: 6px; }
+.examples .out { margin: 2px 0 0 14px; font-size: 13px; color: var(--vx-muted); }
 .summary { color: var(--vx-ink); }
 .detail { padding: 12px 14px 16px; border-bottom: 1px solid var(--vx-line); display: flex; flex-direction: column; gap: 10px; }
 .detail p { margin: 0; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .params { overflow-x: auto; }
 .params .vx-table { width: 100%; font-size: 13px; }
-.item:last-of-type > .line, .item:last-of-type > .detail { border-bottom: 0; }
 .empty { padding: 12px 14px; margin: 0; }
 
 /* Phones: every column stays, stacked inside the row: the command and its role, then module and summary. */
