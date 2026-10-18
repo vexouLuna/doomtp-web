@@ -55,7 +55,10 @@ export interface ApiKey {
   last_used_at: number | null
 }
 
+export type SlurLevel = 'base' | 'strict' | 'strictest'
+
 export interface Channel {
+
   channel_id: string
   login: string
   active: boolean
@@ -70,6 +73,11 @@ export interface Channel {
   /** Anyone may search the chat log while this and `log_enabled` are on; off, only moderators can. Older bots
    *  don't send it. */
   public_log?: boolean
+  /** Off: the bot stays in chat and keeps logging but never says anything. Older bots don't send it. */
+  bot_enabled?: boolean
+  /** How much of the built-in slur list applies to what the bot says; `base` always does. Older bots don't
+   *  send it. */
+  slur_filter?: SlurLevel
   quiet_errors: boolean
   cc_edit_notice: boolean
   reply_hold_ms: number
@@ -83,6 +91,8 @@ export type ChannelPatch = Partial<{
   log_enabled: boolean
   history_backfill: boolean
   public_log: boolean
+  bot_enabled: boolean
+  slur_filter: SlurLevel
   reply_hold_ms: number
   timezone: string
   automod_action: string

@@ -31,7 +31,7 @@ onMounted(() => {
 const REFERENCES = [
   ['{_1}, {_2}', 'the result of an earlier command in the same line'],
   ['{_}', 'the previous result'],
-  ['{_1[celsius]}', "a key of that result's data"],
+  ['{_1[user]}', "a key of that result's data (each command's data is listed with it)"],
   ['{arg.1}, {arg.2+}, {arg.name}', 'arguments, inside a custom command or trigger'],
   ['{$chatter.display}, {$channel.name}', "who and where: the bot's own fields start with $"],
   ['{channel.deaths}, {channel.stats[kills]}', 'variables; brackets go into a stored list or map'],
