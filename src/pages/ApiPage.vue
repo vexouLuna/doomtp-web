@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // The bot's HTTP API, read from its own /openapi.json so it can't drift. Swagger UI (/docs, served by the bot) stays
 // linked for trying requests; this page is the one that matches the site.
-import { VxButton, VxCallout, VxSkeleton } from '@vexoulz/ui'
+import { VxButton, VxCallout, VxSkeleton, VxToc } from '@vex/ui'
 import { computed } from 'vue'
-import { useResource } from '@vexoulz/ui/utils'
-import { errorText } from '@vexoulz/platform-web'
+import { useResource } from '@vex/ui/utils'
+import { errorText } from '@vex/platform-web'
 import DtpShell from '@/components/DtpShell.vue'
 import { codeRuns, readOpenApi } from '@/lib/openapi'
 
@@ -29,6 +29,8 @@ const idOf = (key: string) => key.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g,
 
 <template>
   <DtpShell>
+    <div class="vx-toc-layout">
+    <VxToc headings="h2" />
     <article class="doc api">
       <h1 class="vx-display">API</h1>
       <p class="vx-muted">
@@ -104,6 +106,7 @@ const idOf = (key: string) => key.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g,
         </section>
       </template>
     </article>
+    </div>
   </DtpShell>
 </template>
 

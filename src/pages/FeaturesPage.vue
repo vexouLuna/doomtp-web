@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { VxSkeleton } from '@vexoulz/ui'
+import { VxSkeleton, VxToc } from '@vex/ui'
 import { computed } from 'vue'
-import { useResource } from '@vexoulz/ui/utils'
+import { useResource } from '@vex/ui/utils'
 import ChatLine from '@/components/ChatLine.vue'
 import Cmd from '@/components/Cmd.vue'
 import DtpShell from '@/components/DtpShell.vue'
@@ -54,24 +54,6 @@ const actBlock = computed(() =>
   ),
 )
 
-const TOC = [
-  ['commands', 'Commands and pipelines'],
-  ['permissions', 'Roles and permissions'],
-  ['cooldowns', 'Cooldowns'],
-  ['toggles', 'Turning things on and off'],
-  ['custom', 'Custom commands'],
-  ['packs', 'Packs and derived commands'],
-  ['variables', 'Variables'],
-  ['triggers', 'Triggers, listeners and timers'],
-  ['filter', 'Word filter'],
-  ['moderation', 'Moderation-aware replies'],
-  ['logging', 'Chat log and history'],
-  ['quotes', 'Quotes'],
-  ['channels', 'Channels and onboarding'],
-  ['explain', 'Explaining an expression'],
-  ['api', 'API and admin'],
-]
-
 function roleSource(name: string): string {
   if (['broadcaster', 'moderator', 'vip', 'subscriber'].includes(name)) return 'Twitch badges'
   if (name === 'everyone') return 'everyone in chat'
@@ -82,16 +64,14 @@ function roleSource(name: string): string {
 
 <template>
   <DtpShell>
+    <div class="vx-toc-layout">
+    <VxToc />
     <article class="doc">
       <h1 class="vx-display">Features</h1>
       <p class="vx-muted">
         What the bot does, how each part behaves, and where the limits are. Examples use
         <code>{{ p }}</code> as the command sign; your channel may use another.
       </p>
-
-      <nav class="toc vx-panel" aria-label="On this page">
-        <a v-for="[id, label] in TOC" :key="id" :href="`#${id}`">{{ label }}</a>
-      </nav>
 
       <h2 id="commands" class="vx-display">Commands and pipelines</h2>
       <p>A command is one step. Operators join steps into a line, and only the <em>last</em> result is sent to chat.</p>
@@ -109,7 +89,7 @@ function roleSource(name: string): string {
       </div>
       <p>
         <strong>Results carry three things:</strong> an exit code, a message (what chat sees) and data (structured values
-        other commands can read as <code>{_1}</code>, <code>{_1[celsius]}</code>). Failure codes are documented in the
+        other commands can read as <code>{_1}</code>, <code>{_1[user]}</code>). Failure codes are documented in the
         <RouterLink to="/docs/language">language reference</RouterLink>.
       </p>
       <p>
@@ -295,11 +275,14 @@ function roleSource(name: string): string {
         </li>
         <li>
           <strong>The bot's own events</strong> have no chatter. <code>bot_online</code> fires when it is in chat again,
-          with <code>{event.reason}</code> (<code>start</code>, <code>update</code> or <code>reconnect</code>) and
-          <code>{event.down_s}</code>, at most once every 15 minutes. After an update, <code>bot_updated</code> fires
+          with <code>{event.reason}</code> (<code>start</code>, <code>update</code> or <code>reconnect</code>),
+          <code>{event.down_s}</code> and, after a reconnect, <code>{event.cause}</code>, at most once every 15
+          minutes. A reconnect is the bot starting its Twitch connection again, not the program restarting, so
+          <code>$bot.uptime</code> keeps counting. After an update, <code>bot_updated</code> fires
           first, with <code>{event.version}</code> and <code>{event.previous}</code>. <code>bot_joined</code>,
           <code>bot_modded</code> and <code>bot_unmodded</code> fire when it joins and when it is given or loses
-          moderator, which it notices within the hour.
+          moderator, which it notices within the hour. Every event and what it carries is listed on the
+          <RouterLink to="/docs/language#events">language page</RouterLink>.
         </li>
         <li>
           <strong>Listeners</strong> run on ordinary chat lines matching a regular expression, with captures in
@@ -472,11 +455,11 @@ function roleSource(name: string): string {
         click on any line for its arguments, cooldowns and examples. Press <kbd>Esc</kbd> in the box to clear it.
       </p>
     </article>
+    </div>
   </DtpShell>
 </template>
 
 <style scoped>
-.toc { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 4px 16px; padding: 12px 16px; margin: 16px 0 8px; font-size: 14px; }
 .loading { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
 kbd { font-family: var(--vx-font-mono); font-size: 0.85em; padding: 0 4px; border: 1px solid var(--vx-line); border-radius: 4px; }
 </style>

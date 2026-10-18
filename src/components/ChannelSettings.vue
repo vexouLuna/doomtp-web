@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // A channel's settings as a form: only what changed is sent, as one PATCH, the same change `config` makes in chat.
-import { VxButton, VxField, VxInput, VxSegmented, VxSelect, VxStepper, VxSwitch, useToast } from '@vexoulz/ui'
+import { VxButton, VxField, VxInput, VxSegmented, VxSelect, VxStepper, VxSwitch, useToast } from '@vex/ui'
 import { computed, reactive, shallowRef, watch } from 'vue'
 import { can } from '@/lib/access'
 import { admin, type Channel, type ChannelPatch } from '@/lib/admin'
-import { errorText } from '@vexoulz/platform-web'
+import { errorText } from '@vex/platform-web'
 
 const props = defineProps<{ channel: Channel; roles: string[] }>()
 const emit = defineEmits<{ saved: [channel: Channel] }>()
@@ -16,6 +16,8 @@ const fromChannel = (c: Channel) => ({
   history_backfill: c.history_backfill,
   // Older bots don't know it; the switch is hidden then, so it's never sent.
   public_log: c.public_log ?? true,
+  bot_enabled: c.bot_enabled ?? true,
+  slur_filter: c.slur_filter ?? 'base',
   error_replies: !c.quiet_errors,
   cc_edit_notice: c.cc_edit_notice,
   reply_hold_ms: c.reply_hold_ms,
@@ -77,6 +79,11 @@ function reset() {
 
 const setRole = (key: keyof Form, role: string) => Object.assign(form, { [key]: role })
 const roleOptions = computed(() => props.roles.map((r) => ({ value: r, label: r })))
+const SLUR_LEVELS = [
+  { value: 'base', label: 'Base' },
+  { value: 'strict', label: 'Strict' },
+  { value: 'strictest', label: 'Strictest' },
+]
 const AUTOMOD = [
   { value: 'off', label: 'Off' },
   { value: 'delete', label: 'Delete' },
@@ -95,6 +102,19 @@ const ROLE_FIELDS: [keyof Form, string, string][] = [
   <form class="settings" @submit.prevent="save">
     <div class="group vx-panel">
       <h3 class="vx-eyebrow">Chat</h3>
+      <VxSwitch
+        v-if="channel.bot_enabled !== undefined"
+        v-model="form.bot_enabled"
+        label="Bot speaks: off keeps it logging, but it never sends a message here"
+      />
+      <VxField
+        v-if="channel.slur_filter !== undefined"
+        label="Slur filter"
+        help="Slurs the bot never says. Base always applies; strict and strictest add more. Swearing is never filtered."
+      >
+        <template #default><VxSegmented v-model="form.slur_filter" :options="SLUR_LEVELS" label="Slur filter level" /></template>
+      </VxField>
+
       <VxField label="Command sign" help="What starts a command here: a character or an emoji.">
         <template #default="{ id }"><VxInput :id="id" v-model="form.prefix" mono class="sign" /></template>
       </VxField>

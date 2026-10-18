@@ -2,15 +2,14 @@
 // One channel: its status, tier and capabilities, the ban callout with rejoin, and a tab per area (components/manage).
 // Every change goes through the same services as chat. The tabs that page through their own data (variables, runs,
 // the chat log, the audit) load it themselves; the rest share one load here and ask for it again after a change.
-import { VxButton, VxCallout, VxChip, VxDialog, VxSkeleton, VxTabs, useToast } from '@vexoulz/ui'
+import { VxButton, VxCallout, VxChip, VxDialog, VxSkeleton, VxTabs, useToast } from '@vex/ui'
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useResource } from '@vexoulz/ui/utils'
+import { useResource } from '@vex/ui/utils'
 import ManageShell from '@/components/ManageShell.vue'
 import ChannelSettings from '@/components/ChannelSettings.vue'
 import ChatLine from '@/components/ChatLine.vue'
-import { AuditBrowser } from '@vexoulz/platform-web/vue'
-import AuditActor from '@/components/AuditActor.vue'
+import { AuditBrowser } from '@vex/platform-web/vue'
 import BackfillPanel from '@/components/manage/BackfillPanel.vue'
 import ChatLogTab from '@/components/manage/ChatLogTab.vue'
 import FilterTab from '@/components/manage/FilterTab.vue'
@@ -27,7 +26,7 @@ import '@/components/manage/tabs.css'
 import { can, manages } from '@/lib/access'
 import { admin, readIgnored, type Channel } from '@/lib/admin'
 import { platform } from '@/lib/platform'
-import { errorText } from '@vexoulz/platform-web'
+import { errorText } from '@vex/platform-web'
 import { api, statusOf } from '@/lib/api'
 import { builtinRow, customRow } from '@/lib/commands'
 import { commandRows, moduleRows, publishedRows } from '@/lib/modules'
@@ -234,7 +233,6 @@ async function part() {
       <section v-else-if="tab === 'audit'">
         <p class="vx-muted intro">Every change made here, in chat, on this site or with an API key.</p>
         <AuditBrowser :client="platform" :scope="data.channel.channel_id" action-hint="cc. or cc.edit" target-hint="exact, or a prefix:">
-          <template #actor="{ entry }"><AuditActor :entry="entry" /></template>
         </AuditBrowser>
       </section>
       <IgnoredTab v-else-if="tab === 'ignored'" :login="login" :sign="sign" :ignored="data.ignored" :reload="reload" />
