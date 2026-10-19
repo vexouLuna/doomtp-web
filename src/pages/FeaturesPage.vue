@@ -298,7 +298,7 @@ function roleSource(name: string): string {
         </li>
       </ul>
       <p>
-        All three run at the rank of the moderator who created them, never higher, and go through the same checks as a
+        Triggers and timers run at the rank of the moderator who created them, never higher, and go through the same checks as a
         typed command.
       </p>
       <p class="vx-muted">
