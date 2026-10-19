@@ -202,7 +202,7 @@ const limits = computed(() => {
           <template v-for="(ns, i) in data.language.variable_namespaces" :key="ns"><template v-if="i"> · </template><code>{{ ns }}.name</code></template>
         </p>
         <p>
-          Write with <code>></code> (replace) or <code>>></code> (append), only when the command succeeded. Who may
+          Write with <code>-&gt;</code> (replace) or <code>--&gt;</code> (append), only when the command succeeded. Who may
           write what is on the <RouterLink to="/docs/features#variables">features page</RouterLink>.
         </p>
       </template>
