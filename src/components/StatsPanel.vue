@@ -54,9 +54,9 @@ const commitUrl = computed(() =>
 </template>
 
 <style scoped>
-.stats { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; overflow-x: auto; }
+.stats { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .build { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; }
-.grid { display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, auto); font-size: 13px; }
+.grid { display: grid; grid-template-columns: minmax(8rem, 1fr) repeat(3, auto); font-size: 13px; overflow-x: auto; }
 .row { display: contents; }
 .row > span { padding: 7px 0; border-bottom: 1px solid var(--vx-line); }
 .head > span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding-top: 0; }

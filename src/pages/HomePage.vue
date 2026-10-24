@@ -55,11 +55,11 @@ const START = [
     </div>
 
     <template v-if="stats">
-      <h2 class="vx-display sec">Right now</h2>
+      <div class="sec-head"><h2 class="vx-display sec">Right now</h2><RouterLink to="/stats" class="small">By channel →</RouterLink></div>
       <StatsPanel :counts="stats" :build="stats" />
     </template>
 
-    <h2 class="vx-display sec">Channels</h2>
+    <div class="sec-head"><h2 class="vx-display sec">Channels</h2><RouterLink to="/channels" class="small">All details →</RouterLink></div>
     <VxCallout v-if="site.error" tone="error" title="Couldn't load the channels">
       {{ site.error }}
       <template #actions><VxButton size="sm" @click="loadSite">Try again</VxButton></template>
@@ -93,12 +93,13 @@ const START = [
 .try { padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .try p { margin: 0; }
 .sec { font-size: 22px; margin: 36px 0 14px; }
+.sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: 14px; }
 .card { padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; color: inherit; min-width: 0; }
 .card:hover { border-color: var(--vx-accent); color: inherit; }
 .card b { color: var(--vx-ink); }
-.chan-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-width: 0; }
-.chan-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chan-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 8px; min-width: 0; }
+.chan-name { flex: 1 1 8rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; flex-shrink: 0; }
 .small { font-size: 12px; }
 code { font-family: var(--vx-font-mono); }

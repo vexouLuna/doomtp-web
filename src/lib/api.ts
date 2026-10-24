@@ -55,8 +55,8 @@ export interface SiteChannel {
   read_only?: boolean
   can_moderate?: boolean
   logs_public?: boolean
-  /** When the bot first joined, ISO 8601. */
-  joined_at?: string | null
+  /** When the bot first joined, epoch ms. */
+  joined_at?: number | null
 }
 export interface Site {
   version: string
