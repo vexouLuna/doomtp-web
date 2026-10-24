@@ -5,7 +5,6 @@ import { reactive, readonly } from 'vue'
 import { admin, type OwnChannel, type Session, type SessionRole } from './admin'
 import { auth } from './api'
 import { loadRanks } from './ranks'
-import { header, loadPreview, savePreview, type Preview } from './viewAs'
 
 const state = reactive({
   checked: false,
@@ -29,55 +28,8 @@ const state = reactive({
   /** Why the visitor was sent to the sign-in page (an expired session). */
   notice: null as string | null,
 })
-/** The session as the bot gave it. Signing in and out, the router guard and the account menu go by this one. */
-export const realSession = readonly(state)
-
-// ── view as (admins) ──
-// An admin can preview the site as another role (lib/viewAs.ts). The bot does the previewing (ADR-0030): every call
-// carries the preview's X-View-As, so the bot answers as it would answer that viewer and refuses every change, and
-// GET /session with it gives the session that viewer would have, which the pages then read.
-const preview = reactive({ as: null as Preview | null, session: null as Session | null })
-const realAdmin = () => state.authenticated && (state.role === 'admin' || state.role === null)
-/** Whether the real session may preview other roles. */
-export const mayViewAs = realAdmin
-/** What the site is previewed as, or null (never for anyone but an admin, and only once the bot has answered). */
-export const previewing = (): Preview | null => (realAdmin() && preview.session ? preview.as : null)
-/** Changes with every preview, so the pages can load again as the new role (App.vue keys the page on it). */
-export const previewKey = () => JSON.stringify(previewing())
-/** Starts, changes or (with null) ends a preview. The bot works out the previewed session first: one it refuses (a
- *  channel it doesn't know) leaves the current preview as it was, and throws. */
-export async function viewAs(p: Preview | null): Promise<void> {
-  const found = p ? await admin.previewSession(header(p)) : null
-  preview.as = p
-  preview.session = found
-  savePreview(p)
-}
-auth.viewAs = () => {
-  const p = previewing()
-  return p ? header(p) : null
-}
-
-/** The previewed session while previewing, else null. */
-const shown = (): Session | null => (previewing() ? preview.session : null)
-
-/** The session the pages see: the real one, or the one the bot gave for the preview. */
-export const session = {
-  get checked() { return state.checked },
-  get enabled() { return state.enabled },
-  get twitchLogin() { return state.twitchLogin },
-  get expiresAt() { return state.expiresAt },
-  get notice() { return state.notice },
-  get authenticated() { const s = shown(); return s ? s.authenticated : state.authenticated },
-  get role(): SessionRole | null { const s = shown(); return s ? (s.role ?? null) : state.role },
-  get user(): Readonly<{ id: string; login: string }> | null { const s = shown(); return s ? (s.user ?? null) : state.user },
-  get channels(): readonly string[] | null { const s = shown(); return s ? (s.channels ?? null) : state.channels },
-  get channelRoles(): Readonly<Record<string, 'broadcaster' | 'moderator'>> | null {
-    const s = shown()
-    return s ? (s.channel_roles ?? null) : state.channelRoles
-  },
-  get channelRanks(): Readonly<Record<string, number>> | null { const s = shown(); return s ? (s.channel_ranks ?? null) : state.channelRanks },
-  get ownChannel(): Readonly<OwnChannel> | null { const s = shown(); return s ? (s.own_channel ?? null) : state.ownChannel },
-}
+/** The session as the bot gave it: signing in and out, the router guard, the account menu and every page read it. */
+export const session = readonly(state)
 
 function apply(s: Session) {
   state.checked = true
@@ -103,7 +55,6 @@ function clear() {
   state.channelRoles = null
   state.channelRanks = null
   state.ownChannel = null
-  preview.session = null
   auth.csrf = null
 }
 
@@ -121,8 +72,7 @@ auth.onUnauthorized = () => {
 }
 
 let pending: Promise<void> | null = null
-/** Loads the session once, with chat's ranks and an admin's preview (this tab's, after a reload); later calls share
- *  the answer. */
+/** Loads the session once, with chat's ranks; later calls share the answer. */
 export function ensure(): Promise<void> {
   if (state.checked) return Promise.resolve()
   const real = admin
@@ -134,16 +84,9 @@ export function ensure(): Promise<void> {
       state.authenticated = false
     })
   pending ??= Promise.all([real, loadRanks()])
-    .then(restorePreview)
+    .then(() => undefined)
     .finally(() => (pending = null))
   return pending
-}
-
-/** Asks the bot for the preview's session again (or this tab's stored one); a preview it refuses now ends. */
-async function restorePreview(): Promise<void> {
-  const p = preview.as ?? loadPreview()
-  if (!p || !realAdmin()) return
-  await viewAs(p).catch(() => viewAs(null))
 }
 
 /** Asks the bot again, after something that changes what the session manages (adding the bot to a channel). */
@@ -196,7 +139,6 @@ export async function login(password: string): Promise<void> {
 }
 
 export async function logout(): Promise<void> {
-  viewAs(null)
   try {
     await admin.logout()
   } finally {

@@ -32,8 +32,6 @@ export interface Session {
   channel_ranks?: Record<string, number> | null
   /** The signed-in user's own channel: whether the bot is in it, and at what tier. Null for the admin password. */
   own_channel?: OwnChannel | null
-  /** The preview this answers for (`X-View-As`, bot ADR-0030), when an admin asked as someone else. */
-  view_as?: string
 }
 
 /** `user` manages no channel; `moderator` manages the ones in `channels`; `admin` manages the bot. */
@@ -327,12 +325,9 @@ export interface Health {
 export const EXPLAIN_BADGES = ['subscriber', 'vip', 'moderator', 'lead_moderator'] as const
 
 export const admin = {
-  /** The real session, whatever is being previewed. */
-  session: () => request<Session>('/session', {}, { unscoped: true }),
-  /** The session an admin's preview stands for, as the bot works it out (`X-View-As`, ADR-0030). */
-  previewSession: (viewAs: string) => request<Session>('/session', { headers: { 'X-View-As': viewAs } }, { unscoped: true }),
-  login: (password: string) => request<Session>('/session', json('POST', { password }), { unscoped: true }),
-  logout: () => request<unknown>('/session', json('DELETE'), { unscoped: true }),
+  session: () => request<Session>('/session'),
+  login: (password: string) => request<Session>('/session', json('POST', { password })),
+  logout: () => request<unknown>('/session', json('DELETE')),
   /** Adds the bot to the signed-in user's own channel at once (ADR-0026). */
   joinOwn: () => request<{ login: string; channel_id: string }>('/me/channel', json('POST')),
 
@@ -340,7 +335,7 @@ export const admin = {
   createKey: (name: string, scopes: string[]) => request<ApiKey & { secret: string }>('/keys', json('POST', { name, scopes })),
   revokeKey: (id: number) => request<unknown>(`/keys/${id}`, json('DELETE')),
 
-  channels: (unscoped = false) => request<{ channels: Channel[] }>('/channels', {}, { unscoped }),
+  channels: () => request<{ channels: Channel[] }>('/channels'),
   channel: (login: string) => request<Channel>(at(login)),
   join: (login: string, rejoin = false) => request<Channel>('/channels', json('POST', { login, rejoin })),
   part: (login: string) => request<unknown>(at(login), json('DELETE')),
@@ -448,7 +443,7 @@ export const admin = {
   deleteVariable: (login: string, name: string) =>
     request<unknown>(`${at(login)}/variables/${encodeURIComponent(name)}`, json('DELETE')),
 
-  roles: (login: string, unscoped = false) => request<ChannelRoles>(`${at(login)}/roles`, {}, { unscoped }),
+  roles: (login: string) => request<ChannelRoles>(`${at(login)}/roles`),
   createRole: (login: string, name: string, rank: number) => request<unknown>(`${at(login)}/roles`, json('POST', { name, rank })),
   deleteRole: (login: string, name: string) => request<unknown>(`${at(login)}/roles/${encodeURIComponent(name)}`, json('DELETE')),
   /** `durationS` from a minute to 366 days; left out, until removed. */
