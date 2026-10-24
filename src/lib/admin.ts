@@ -261,6 +261,8 @@ export const OWNER_KINDS = ['channel', 'publisher', 'chatter'] as const
 export interface LimitOverride extends Partial<{ [K in keyof Limits]: number | null }> {
   owner_kind: string
   owner_id: string
+  /** Null when neither the bot nor Twitch knows the id any more. */
+  owner_login?: string | null
 }
 
 /** One command or trigger run (the bot keeps them for a while). */
