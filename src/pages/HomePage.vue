@@ -73,8 +73,14 @@ const START = [
     </p>
     <div v-else class="cards">
       <RouterLink v-for="ch in site.info.channels" :key="ch.login" :to="`/channels/${ch.login}`" class="card chan vx-panel">
-        <div class="chan-top"><b>#{{ ch.login }}</b><VxChip tone="ok">joined</VxChip></div>
-        <div class="vx-muted small vx-mono">sign <code>{{ ch.prefix }}</code> · {{ ch.tier }} tier</div>
+        <div class="chan-top">
+          <b class="chan-name" :title="`#${ch.login}`">#{{ ch.login }}</b>
+          <span class="chips">
+            <VxChip :tone="ch.tier === 'full' ? 'ok' : 'default'">{{ ch.tier }}</VxChip>
+            <VxChip v-if="ch.read_only" tone="warn" title="It keeps logging but never sends a message here">Bot speaks: off</VxChip>
+          </span>
+        </div>
+        <div class="vx-muted small vx-mono">sign <code>{{ ch.prefix }}</code></div>
       </RouterLink>
     </div>
   </DtpShell>
@@ -87,11 +93,13 @@ const START = [
 .try { padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .try p { margin: 0; }
 .sec { font-size: 22px; margin: 36px 0 14px; }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
-.card { padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; color: inherit; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: 14px; }
+.card { padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; color: inherit; min-width: 0; }
 .card:hover { border-color: var(--vx-accent); color: inherit; }
 .card b { color: var(--vx-ink); }
-.chan-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.chan-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-width: 0; }
+.chan-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; flex-shrink: 0; }
 .small { font-size: 12px; }
 code { font-family: var(--vx-font-mono); }
 @container vx-site (max-width: 700px) {

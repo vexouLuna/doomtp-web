@@ -51,6 +51,12 @@ export interface SiteChannel {
   login: string
   prefix: string
   tier: string
+  /** The bot logs this channel but never sends a message there (bots before the site fields leave these out). */
+  read_only?: boolean
+  can_moderate?: boolean
+  logs_public?: boolean
+  /** When the bot first joined, ISO 8601. */
+  joined_at?: string | null
 }
 export interface Site {
   version: string
