@@ -5,9 +5,10 @@ import { VxButton, VxCallout, VxField, VxInput, VxSelect, VxSkeleton } from '@ve
 import { computed, reactive, watch } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { bytes, errorText } from '@vex/platform-web'
-import { admin, OWNER_KINDS, type Limits, type LimitsPatch } from '@/lib/admin'
+import { admin, OWNER_KINDS, type LimitOverride, type Limits, type LimitsPatch } from '@/lib/admin'
 import { count } from '@/lib/format'
 import { useAct } from '@/lib/useAct'
+import UserRef from '@/components/UserRef.vue'
 
 const FIELDS: { key: keyof Limits; label: string; size: boolean }[] = [
   { key: 'quota_bytes', label: 'Quota (bytes)', size: true },
@@ -50,6 +51,13 @@ const ownerPatch = computed<LimitsPatch | null>(() => {
   return out
 })
 const ownerReady = computed(() => !!owner.user.trim() && !!ownerPatch.value && Object.keys(ownerPatch.value).length > 0)
+/** Loads an override into the form, to change it or put fields back to the default. */
+function editOwner(o: LimitOverride) {
+  if (!o.owner_login) return
+  owner.kind = o.owner_kind
+  owner.user = o.owner_login
+  for (const f of FIELDS) owner[f.key] = o[f.key] === null || o[f.key] === undefined ? '' : String(o[f.key])
+}
 async function saveOwner() {
   const who = owner.user.trim().replace(/^[@#]/, '')
   if (!ownerReady.value) return
@@ -77,13 +85,14 @@ async function saveOwner() {
       <h3 class="vx-eyebrow sub">Overrides</h3>
       <div class="table-scroll vx-panel">
         <table class="vx-table">
-          <thead><tr><th>Owner</th><th v-for="f in FIELDS" :key="f.key">{{ f.label.replace(/ \(bytes\)$/, '') }}</th></tr></thead>
+          <thead><tr><th>Owner</th><th v-for="f in FIELDS" :key="f.key">{{ f.label.replace(/ \(bytes\)$/, '') }}</th><th></th></tr></thead>
           <tbody>
             <tr v-for="o in data.overrides" :key="`${o.owner_kind}/${o.owner_id}`">
-              <td class="nowrap"><span class="vx-muted">{{ o.owner_kind }}</span> <span class="vx-mono">{{ o.owner_id }}</span></td>
+              <td class="nowrap"><span class="vx-muted">{{ o.owner_kind }}</span> <UserRef :id="o.owner_id" :login="o.owner_login" /></td>
               <td v-for="f in FIELDS" :key="f.key" :class="{ 'vx-muted': o[f.key] === null || o[f.key] === undefined }">{{ show(f, o[f.key]) }}</td>
+              <td class="end"><VxButton v-if="o.owner_login" size="sm" @click="editOwner(o)">Edit</VxButton></td>
             </tr>
-            <tr v-if="!data.overrides.length"><td :colspan="FIELDS.length + 1" class="vx-muted">Every owner has the defaults.</td></tr>
+            <tr v-if="!data.overrides.length"><td :colspan="FIELDS.length + 2" class="vx-muted">Every owner has the defaults.</td></tr>
           </tbody>
         </table>
       </div>

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 // Every page's frame: the shared shell with dtp's nav, Manage lives in the account menu
-// (the Manage bar itself is on the Manage pages, ManageShell), an admin's "View as" banner while previewing, and the
-// bot's version and default sign in the footer.
+// (the Manage bar itself is on the Manage pages, ManageShell), and the bot's version and default sign in the footer.
 import { VxSiteFooter, VxSiteShell } from '@vex/ui'
 import type { NavItem } from '@vex/ui'
 import { useAccount } from '@vex/ui/account'
@@ -10,7 +9,6 @@ import { useRoute } from 'vue-router'
 import { bounceOnce, ensure, session } from '@/lib/session'
 import { loadSite, site } from '@/lib/site'
 import AccountMenu from './AccountMenu.vue'
-import ViewAsBar from './ViewAsBar.vue'
 
 withDefaults(defineProps<{ sky?: 'full' | 'dim' | 'off' }>(), { sky: 'full' })
 
@@ -41,7 +39,6 @@ watch(
 <template>
   <VxSiteShell site="dtp" :nav="NAV" :sky="sky">
     <template #account><AccountMenu /></template>
-    <ViewAsBar />
     <slot></slot>
     <template #footer>
       <VxSiteFooter>
