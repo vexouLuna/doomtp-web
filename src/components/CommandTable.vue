@@ -142,7 +142,7 @@ function toggle(key: string) {
               <tbody>
                 <tr v-for="(holds, form) in row.returns" :key="form">
                   <td>{{ form || 'plain' }}</td>
-                  <td><code>{{ holds }}</code></td>
+                  <td><code class="holds">{{ holds }}</code></td>
                 </tr>
               </tbody>
             </table>
@@ -221,6 +221,8 @@ button.row { cursor: pointer; }
 .params .vx-table { width: 100%; font-size: 13px; }
 .empty { padding: 12px 14px; margin: 0; }
 .small { font-size: 12px; margin-top: 4px; }
+/* A type can be long ({a: int, b?: str, …}): it wraps on a phone rather than scrolling away. */
+.holds { white-space: normal; overflow-wrap: anywhere; }
 
 /* Phones: every column stays, stacked inside the row: the command and its role, then module and summary. */
 @container vx-site (max-width: 700px) {
