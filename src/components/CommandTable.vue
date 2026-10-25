@@ -5,7 +5,7 @@
 // line (the `actions` slot), a note under the summary (`note`) and more details (`detail`).
 import { VxButton, VxChip, VxInput } from '@vex/ui'
 import { computed, ref, useSlots } from 'vue'
-import { type CommandRow, filterRows } from '@/lib/commands'
+import { type CommandRow, filterRows, nameLine } from '@/lib/commands'
 import ChatLine from './ChatLine.vue'
 
 const props = withDefaults(
@@ -89,7 +89,7 @@ function toggle(key: string) {
             :aria-expanded="open.has(row.key)"
             @click="toggle(row.key)"
           >
-            <ChatLine class="name" :class="{ internal: row.internal }" role="cell" :lines="row.internal ? row.usage : `${sign}${row.usage}`" :sign="sign" signature />
+            <ChatLine class="name" :class="{ internal: row.internal }" role="cell" :lines="nameLine(row, sign)" :sign="sign" signature />
             <span class="vx-muted module" role="cell">{{ row.module }}</span>
             <span role="cell">
               <VxChip v-if="row.internal" tone="warn" class="tag-internal" title="Only this pack's own commands call it; chat can't type it">⚙ internal</VxChip>
@@ -105,7 +105,11 @@ function toggle(key: string) {
           <p v-if="row.internal" class="vx-muted">
             Internal to the <strong>{{ row.module }}</strong> pack: only its own commands call it, so it can't be typed in chat.
           </p>
-          <template v-if="row.kind !== 'built-in'">
+          <p v-if="row.kind === 'form'" class="vx-muted">
+            Part of the language rather than a command: it has no role, cooldown or switch of its own, and only the
+            branch it chooses runs.
+          </p>
+          <template v-if="row.kind === 'derived' || row.kind === 'published'">
             <p class="vx-muted">
               A custom command by <strong>@{{ row.owner }}</strong> (v{{ row.version }})<template v-if="row.kind === 'derived'">,
               published for every channel</template>. Its author can change it at any time.
@@ -131,6 +135,20 @@ function toggle(key: string) {
                 </tr>
               </tbody>
             </table>
+          </div>
+          <div v-if="Object.keys(row.returns).length" class="params vx-scroll">
+            <table class="vx-table">
+              <thead><tr><th>Returns, when used as</th><th>What <code>{_}</code> holds</th></tr></thead>
+              <tbody>
+                <tr v-for="(holds, form) in row.returns" :key="form">
+                  <td>{{ form || 'plain' }}</td>
+                  <td><code>{{ holds }}</code></td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-if="Object.values(row.returns).some((t) => t.includes('?:'))" class="vx-muted small">
+              A field written <code>key?</code> isn't returned by every way the command can end.
+            </p>
           </div>
           <slot name="detail" :row="row"></slot>
           <div v-if="row.examples.length" class="examples">
@@ -202,6 +220,7 @@ button.row { cursor: pointer; }
 .params { overflow-x: auto; }
 .params .vx-table { width: 100%; font-size: 13px; }
 .empty { padding: 12px 14px; margin: 0; }
+.small { font-size: 12px; margin-top: 4px; }
 
 /* Phones: every column stays, stacked inside the row: the command and its role, then module and summary. */
 @container vx-site (max-width: 700px) {
