@@ -2,7 +2,7 @@
 // Your packs, as `pack` manages them in chat: a named set of your commands that is published and turned on and off
 // as one module. An internal member runs only when another command in the pack calls it. A pack's own triggers
 // (ADR-0032) run wherever it is published. Each member's rank (ADR-0033) is the least a channel can require of it.
-import { VxButton, VxCheckbox, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxSelect, VxSwitch } from '@vex/ui'
+import { VxButton, VxCheckbox, VxChip, VxConfirm, VxEmptyState, VxField, VxInput, VxLoadState, VxSelect, VxSwitch } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -133,18 +133,18 @@ const deleting = ref<MyPack | null>(null)
       </template>
     </VxLoadState>
 
-    <VxDialog :open="deleting !== null" :title="`Delete the ${deleting?.name} pack?`" @update:open="(v: boolean) => { if (!v) deleting = null }">
+    <VxConfirm
+      :open="deleting !== null"
+      :title="`Delete the ${deleting?.name} pack?`"
+      @update:open="(v: boolean) => { if (!v) deleting = null }"
+      confirm-label="Delete"
+      tone="danger"
+      :loading="busy.has('del')"
+      @confirm="act('del', () => admin.deletePack(deleting!.name), `Pack ${deleting!.name} deleted`).then(() => (deleting = null))"
+    >
       It's taken down everywhere it's published<template v-if="deleting?.published.length"> ({{ deleting && where(deleting).join(', ') }})</template>.
       Its commands stay yours.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton
-          variant="danger-solid"
-          :loading="busy.has('del')"
-          @click="act('del', () => admin.deletePack(deleting!.name), `Pack ${deleting!.name} deleted`).then(() => (deleting = null))"
-        >Delete</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
   </section>
 </template>
 

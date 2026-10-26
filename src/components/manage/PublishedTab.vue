@@ -3,7 +3,7 @@
 // enable|disable` does in chat, and one in a pack follows the pack (the Modules tab). Whoever reaches the channel's
 // "publish" role publishes their own commands and packs here, or a pack someone shared, and takes them down again;
 // whoever reaches its "grant" role lets published commands write the channel's variables.
-import { VxButton, VxCallout, VxCheckbox, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxSegmented, VxSelect, VxSwitch, useToast } from '@vex/ui'
+import { VxButton, VxCallout, VxCheckbox, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxSegmented, VxSelect, VxSwitch, useToast } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useResource } from '@vex/ui/utils'
@@ -288,18 +288,18 @@ const errText = errorText
       </template>
     </VxDialog>
 
-    <VxDialog
+    <VxConfirm
       :open="unpublishing !== null"
       :title="unpublishing ? `Unpublish ${unpublishing.kind === 'command' ? sign : ''}${unpublishing.name}?` : ''"
       @update:open="(v: boolean) => { if (!v) unpublishing = null }"
+      confirm-label="Unpublish"
+      tone="danger"
+      :loading="busy.has('unpub')"
+      @confirm="unpublish"
     >
       Chat here can't run {{ unpublishing?.kind === 'pack' ? 'its commands' : 'it' }} any more. The command itself stays
       with its owner, who can publish it again.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton variant="danger-solid" :loading="busy.has('unpub')" @click="unpublish">Unpublish</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
   </section>
 </template>
 

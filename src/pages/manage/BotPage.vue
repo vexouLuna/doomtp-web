@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The bot itself, for its admins: health, joining channels, API keys, variable storage limits and the hosts
 // `http get` may fetch, and what every channel inherits (admins, modules, rules, filter, ignored, published).
-import { VxButton, VxCheckbox, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, timeAgo, useToast } from '@vex/ui'
+import { VxButton, VxCheckbox, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, timeAgo, useToast } from '@vex/ui'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useResource } from '@vex/ui/utils'
@@ -203,13 +203,17 @@ async function revoke() {
       </template>
     </VxDialog>
 
-    <VxDialog :open="!!revoking" :title="`Revoke ${revoking?.name ?? ''}?`" @update:open="(v: boolean) => { if (!v) revoking = null }">
+    <VxConfirm
+      :open="!!revoking"
+      :title="`Revoke ${revoking?.name ?? ''}?`"
+      @update:open="(v: boolean) => { if (!v) revoking = null }"
+      confirm-label="Revoke"
+      tone="danger"
+      :loading="revokeBusy"
+      @confirm="revoke"
+    >
       Anything using this key stops working at once. This can't be undone.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton variant="danger-solid" :loading="revokeBusy" @click="revoke">Revoke</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
   </ManageShell>
 </template>
 

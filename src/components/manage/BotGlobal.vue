@@ -2,7 +2,7 @@
 // What reaches every channel, for bot admins: the admins themselves (`admin add|remove`, bot owners only), the
 // bot-wide module toggles and command rules every channel inherits, the bot-wide word filter, who is ignored
 // everywhere, and the commands and packs published everywhere.
-import { VxButton, VxChip, VxDialog, VxField, VxInput, VxLoadState, VxSegmented } from '@vex/ui'
+import { VxButton, VxChip, VxConfirm, VxField, VxInput, VxLoadState, VxSegmented } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -245,25 +245,29 @@ function unpublish() {
       </template>
     </VxLoadState>
 
-    <VxDialog :open="removing !== null" :title="`Remove ${removing ? name(removing) : ''} as a bot admin?`" @update:open="(v: boolean) => { if (!v) removing = null }">
+    <VxConfirm
+      :open="removing !== null"
+      :title="`Remove ${removing ? name(removing) : ''} as a bot admin?`"
+      @update:open="(v: boolean) => { if (!v) removing = null }"
+      confirm-label="Remove"
+      tone="danger"
+      :loading="busy.has('rm-admin')"
+      @confirm="act('rm-admin', () => admin.removeAdmin(removing!.user_id), `${name(removing!)} is no longer an admin`).then(() => (removing = null))"
+    >
       They keep whatever they have in their own and moderated channels.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton
-          variant="danger-solid"
-          :loading="busy.has('rm-admin')"
-          @click="act('rm-admin', () => admin.removeAdmin(removing!.user_id), `${name(removing!)} is no longer an admin`).then(() => (removing = null))"
-        >Remove</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
 
-    <VxDialog :open="unpublishing !== null" :title="`Unpublish ${unpublishing?.name} everywhere?`" @update:open="(v: boolean) => { if (!v) unpublishing = null }">
+    <VxConfirm
+      :open="unpublishing !== null"
+      :title="`Unpublish ${unpublishing?.name} everywhere?`"
+      @update:open="(v: boolean) => { if (!v) unpublishing = null }"
+      confirm-label="Unpublish"
+      tone="danger"
+      :loading="busy.has('unpublish')"
+      @confirm="unpublish"
+    >
       Channels lose it at once, unless they published it themselves.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton variant="danger-solid" :loading="busy.has('unpublish')" @click="unpublish">Unpublish</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
   </section>
 </template>
 

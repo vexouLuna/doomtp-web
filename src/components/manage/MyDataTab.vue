@@ -2,7 +2,7 @@
 // What the bot keeps about you: your variables (`chatter.*` everywhere, `channel.chatter.*` per channel, and your
 // commands' `publisher.*`) with your storage use, or your runs in every channel, newest first. As in chat, you set
 // and delete your own `chatter.*` (`!var set|del chatter.x`) and clear your own `channel.chatter.*` values.
-import { VxButton, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxSegmented, timeAgo } from '@vex/ui'
+import { VxButton, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxSegmented, timeAgo } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { bytes, errorText } from '@vex/platform-web'
@@ -143,15 +143,19 @@ const outcome = (r: MyRun): { label: string; tone: 'ok' | 'bad' | 'warn' } =>
       </template>
     </VxDialog>
 
-    <VxDialog :open="deleting !== null" :title="`Delete ${deleting ? fullName(deleting) : ''}?`" @update:open="(v: boolean) => { if (!v) deleting = null }">
+    <VxConfirm
+      :open="deleting !== null"
+      :title="`Delete ${deleting ? fullName(deleting) : ''}?`"
+      @update:open="(v: boolean) => { if (!v) deleting = null }"
+      confirm-label="Delete"
+      tone="danger"
+      :loading="busy.has('me-del')"
+      @confirm="remove"
+    >
       <template v-if="deleting">
         Commands that read it get nothing from now on<template v-if="deleting.channel"> in #{{ deleting.channel }}</template>. This can't be undone.
       </template>
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton variant="danger-solid" :loading="busy.has('me-del')" @click="remove">Delete</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
   </section>
 </template>
 

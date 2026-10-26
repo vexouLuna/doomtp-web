@@ -3,7 +3,7 @@
 // it, look back through its versions and revert, delete it; and your aliases for other people's commands.
 // A command is written "from" a channel, as `cc add` is typed in one: that channel's create role, filter and
 // command sign apply. Publishing one (or an alias) in a channel is `cc publish` typed there: its publish role applies.
-import { VxButton, VxCheckbox, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxSelect, VxSwitch, VxTextarea, timeAgo, useToast } from '@vex/ui'
+import { VxButton, VxCheckbox, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxSelect, VxSwitch, VxTextarea, timeAgo, useToast } from '@vex/ui'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useResource } from '@vex/ui/utils'
@@ -345,18 +345,18 @@ async function saveLink() {
       <template #actions="{ close }"><VxButton @click="close">Close</VxButton></template>
     </VxDialog>
 
-    <VxDialog :open="deleting !== null" :title="`Delete ${deleting?.name}?`" @update:open="(v: boolean) => { if (!v) deleting = null }">
+    <VxConfirm
+      :open="deleting !== null"
+      :title="`Delete ${deleting?.name}?`"
+      @update:open="(v: boolean) => { if (!v) deleting = null }"
+      confirm-label="Delete"
+      tone="danger"
+      :loading="busy.has('del')"
+      @confirm="act('del', () => admin.deleteCommand(deleting!.name), `${deleting!.name} deleted`).then(() => (deleting = null))"
+    >
       It stops running everywhere it's published<template v-if="deleting?.links">, and the {{ deleting.links }} links to it stop working</template>.
       This can't be undone.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton
-          variant="danger-solid"
-          :loading="busy.has('del')"
-          @click="act('del', () => admin.deleteCommand(deleting!.name), `${deleting!.name} deleted`).then(() => (deleting = null))"
-        >Delete</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
 
     <VxDialog v-model:open="pub.open" :title="`Publish ${pub.command}`" width="520px">
       <form id="pub-cmd" class="dialog-form" @submit.prevent="publish">

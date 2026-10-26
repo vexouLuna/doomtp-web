@@ -4,7 +4,7 @@
 // keep here (`publisher.channel.*`, `publisher.channel.chatter.*`), with how much storage they use. Whoever reaches
 // the channel's "write channel variables" role sets and deletes `channel.*`; a chatter's value is cleared by them or
 // by the "manage variables" role, as `!var del … @user` does. Nobody edits someone else's.
-import { VxButton, VxCallout, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxProgress, VxSelect, timeAgo } from '@vex/ui'
+import { VxButton, VxCallout, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxProgress, VxSelect, timeAgo } from '@vex/ui'
 import { computed, reactive, ref, watch } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { bytes, errorText } from '@vex/platform-web'
@@ -295,28 +295,32 @@ async function loadTop() {
       </template>
     </VxDialog>
 
-    <VxDialog :open="deleting !== null" :title="`Delete channel.${deleting}?`" @update:open="(v: boolean) => { if (!v) deleting = null }">
+    <VxConfirm
+      :open="deleting !== null"
+      :title="`Delete channel.${deleting}?`"
+      @update:open="(v: boolean) => { if (!v) deleting = null }"
+      confirm-label="Delete"
+      tone="danger"
+      :loading="busy.has('v-del')"
+      @confirm="act('v-del', () => admin.deleteVariable(login, deleting!), `channel.${deleting} deleted`).then(() => (deleting = null))"
+    >
       Commands that read it get nothing from now on. This can't be undone.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton
-          variant="danger-solid"
-          :loading="busy.has('v-del')"
-          @click="act('v-del', () => admin.deleteVariable(login, deleting!), `channel.${deleting} deleted`).then(() => (deleting = null))"
-        >Delete</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
 
-    <VxDialog :open="clearing !== null" :title="`Clear channel.chatter.${clearing?.name}?`" @update:open="(v: boolean) => { if (!v) clearing = null }">
+    <VxConfirm
+      :open="clearing !== null"
+      :title="`Clear channel.chatter.${clearing?.name}?`"
+      @update:open="(v: boolean) => { if (!v) clearing = null }"
+      confirm-label="Clear"
+      tone="danger"
+      :loading="busy.has('v-clear')"
+      @confirm="clear"
+    >
       <template v-if="clearing">
         <UserRef :id="clearing.chatter_id" :login="clearing.chatter_login" /> loses this value here, as
         <code>!var del channel.chatter.{{ clearing.name }} @{{ clearing.chatter_login ?? clearing.chatter_id }}</code> does. This can't be undone.
       </template>
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton variant="danger-solid" :loading="busy.has('v-clear')" @click="clear">Clear</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
   </section>
 </template>
 

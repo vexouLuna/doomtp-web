@@ -2,7 +2,7 @@
 // A channel's custom roles and who holds them, as `role` manages them in chat: a role ranks between the built-in
 // ones, commands can require it, and a member can hold it for a while or until removed. The bot decides what the
 // session may touch (`manageable`): roles ranked below its own, any of them for the broadcaster.
-import { VxButton, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxSelect, VxStepper, timeAgo } from '@vex/ui'
+import { VxButton, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxSelect, VxStepper, timeAgo } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -131,17 +131,17 @@ const expires = (at: number | null) => (at ? `until ${new Date(at).toLocaleStrin
       </template>
     </VxDialog>
 
-    <VxDialog :open="deleting !== null" :title="`Delete the ${deleting} role?`" @update:open="(v: boolean) => { if (!v) deleting = null }">
+    <VxConfirm
+      :open="deleting !== null"
+      :title="`Delete the ${deleting} role?`"
+      @update:open="(v: boolean) => { if (!v) deleting = null }"
+      confirm-label="Delete"
+      tone="danger"
+      :loading="busy.has('r-del')"
+      @confirm="act('r-del', () => admin.deleteRole(login, deleting!), `Role ${deleting} deleted`).then(() => (deleting = null))"
+    >
       Everyone holding it loses it, and commands that require it fall back to their other rules. This can't be undone.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton
-          variant="danger-solid"
-          :loading="busy.has('r-del')"
-          @click="act('r-del', () => admin.deleteRole(login, deleting!), `Role ${deleting} deleted`).then(() => (deleting = null))"
-        >Delete</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
   </section>
 </template>
 

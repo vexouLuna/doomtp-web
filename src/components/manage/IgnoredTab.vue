@@ -2,7 +2,7 @@
 // The users the bot ignores in a channel (and everywhere): their messages are logged but never run commands. With
 // `everywhere`, the bot-wide list alone, for bot admins: `login` is then any joined channel (the bot-wide routes go
 // through one), or null when the bot is in none and the list can only be read.
-import { VxButton, VxCheckbox, VxChip, VxDialog, VxField, VxInput, timeAgo } from '@vex/ui'
+import { VxButton, VxCheckbox, VxChip, VxConfirm, VxField, VxInput, timeAgo } from '@vex/ui'
 import { reactive, ref } from 'vue'
 import ChatLine from '@/components/ChatLine.vue'
 import { can, isMe } from '@/lib/access'
@@ -90,17 +90,16 @@ const lift = (u: Ignored, at: string) =>
     </form>
     <p v-else-if="everywhere && !login" class="vx-muted intro">The bot has to be in a channel to ignore someone everywhere.</p>
 
-    <VxDialog
+    <VxConfirm
       :open="lifting !== null"
       :title="lifting && isMe(lifting.userId) ? 'Stop ignoring you?' : `Unignore ${lifting ? name(lifting) : ''}?`"
       @update:open="(v: boolean) => { if (!v) lifting = null }"
+      confirm-label="Unignore"
+      :loading="busy.has('unignore')"
+      @confirm="lift(lifting!, login!)"
     >
       <template v-if="lifting && isMe(lifting.userId)">The bot answers your commands here again.</template>
       <template v-else>The bot answers their commands {{ lifting?.everywhere ? 'in every channel' : 'here' }} again.</template>
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton variant="primary" :loading="busy.has('unignore')" @click="lift(lifting!, login!)">Unignore</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
   </section>
 </template>

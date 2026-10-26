@@ -2,7 +2,7 @@
 // One channel: its status, tier and capabilities, the ban callout with rejoin, and a tab per area (components/manage).
 // Every change goes through the same services as chat. The tabs that page through their own data (variables, runs,
 // the chat log, the audit) load it themselves; the rest share one load here and ask for it again after a change.
-import { VxButton, VxCallout, VxChip, VxDialog, VxLoadState, VxTabs, useToast } from '@vex/ui'
+import { VxButton, VxCallout, VxChip, VxConfirm, VxLoadState, VxTabs, useToast } from '@vex/ui'
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useResource } from '@vex/ui/utils'
@@ -240,14 +240,17 @@ async function part() {
       </template>
     </VxLoadState>
 
-    <VxDialog v-model:open="partOpen" :title="`Leave #${login}?`">
+    <VxConfirm
+      v-model:open="partOpen"
+      :title="`Leave #${login}?`"
+      confirm-label="Leave"
+      tone="danger"
+      :loading="busy.has('part')"
+      @confirm="part"
+    >
       The bot parts the channel and stops answering there. Its settings, commands and logs stay, and joining again
       brings everything back.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton variant="danger-solid" :loading="busy.has('part')" @click="part">Leave</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
   </ManageShell>
 </template>
 

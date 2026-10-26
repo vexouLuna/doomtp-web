@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The hosts `http get` may fetch (ADR-0020), the same as `admin http` in chat: allow and remove them, attach a
 // secret the bot adds to each request (its value goes in and never comes back), and the rate limits.
-import { VxButton, VxCheckbox, VxChip, VxDialog, VxField, VxInput, VxLoadState, VxRadioGroup, timeAgo } from '@vex/ui'
+import { VxButton, VxCheckbox, VxChip, VxConfirm, VxDialog, VxField, VxInput, VxLoadState, VxRadioGroup, timeAgo } from '@vex/ui'
 import { computed, reactive, ref, watch } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -130,12 +130,16 @@ const saveLimits = () => act('limits', () => admin.setHttpLimits(limitsPatch.val
         <VxButton type="submit" form="host-secret" variant="primary" :loading="busy.has('secret')" :disabled="!secret.name.trim() || !secret.value">Save secret</VxButton>
       </template>
     </VxDialog>
-    <VxDialog :open="removing !== null" :title="`Remove ${removing?.pattern ?? ''}?`" @update:open="(v: boolean) => { if (!v) removing = null }">
+    <VxConfirm
+      :open="removing !== null"
+      :title="`Remove ${removing?.pattern ?? ''}?`"
+      @update:open="(v: boolean) => { if (!v) removing = null }"
+      confirm-label="Remove"
+      tone="danger"
+      :loading="busy.has('deny')"
+      @confirm="remove(removing!)"
+    >
       Commands that fetch from it fail from now on, and its secret is dropped.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton variant="danger-solid" :loading="busy.has('deny')" @click="remove(removing!)">Remove</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
   </div>
 </template>

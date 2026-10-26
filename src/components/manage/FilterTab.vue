@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // A word filter: a channel's own (with the bot-wide list it can't change, and a box to try a message on both), or,
 // without a channel, the bot-wide list itself on the Bot page. The same entries `filter` adds and edits in chat.
-import { VxButton, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxSelect, VxSwitch, useToast } from '@vex/ui'
+import { VxButton, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxSelect, VxSwitch, useToast } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import { can } from '@/lib/access'
 import { admin, type FilterBody, type FilterEntry, type FilterPatch, type FilterTest } from '@/lib/admin'
@@ -192,17 +192,17 @@ const automodSays = (t: FilterTest) => {
       </template>
     </VxDialog>
 
-    <VxDialog :open="deleting !== null" title="Delete this filter entry?" @update:open="(v: boolean) => { if (!v) deleting = null }">
+    <VxConfirm
+      :open="deleting !== null"
+      title="Delete this filter entry?"
+      @update:open="(v: boolean) => { if (!v) deleting = null }"
+      confirm-label="Delete"
+      tone="danger"
+      :loading="busy.has('f-del')"
+      @confirm="act('f-del', () => send.remove(deleting!), 'Filter entry deleted').then(() => (deleting = null))"
+    >
       Messages it would have caught get through from now on. This can't be undone.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton
-          variant="danger-solid"
-          :loading="busy.has('f-del')"
-          @click="act('f-del', () => send.remove(deleting!), 'Filter entry deleted').then(() => (deleting = null))"
-        >Delete</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
   </section>
 </template>
 
