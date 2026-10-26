@@ -126,7 +126,7 @@ const COLUMNS: TableColumn[] = [
     </form>
     <VxCallout v-if="error" tone="error" title="Couldn't load the backfill jobs">{{ errorText(error) }}</VxCallout>
     <VxEmptyState v-else-if="data && !data.jobs.length" title="No backfill jobs yet" />
-    <VxTable v-else-if="data" :columns="COLUMNS" :rows="data.jobs" row-key="id" label="Backfill jobs">
+    <VxTable wrap v-else-if="data" :columns="COLUMNS" :rows="data.jobs" row-key="id" label="Backfill jobs">
       <template #cell-range="{ row: j }"><span class="small">{{ dateTime(j.from_ms) }} → {{ dateTime(j.to_ms) }}</span></template>
       <template #cell-state="{ row: j }">
         <VxChip :tone="TONE[j.state] ?? 'default'">{{ j.state }}</VxChip>

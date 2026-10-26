@@ -57,7 +57,7 @@ const lift = (u: Ignored, at: string) =>
       <ChatLine :lines="`${sign}ignore me`" :sign="sign" /> and take it back with
       <ChatLine :lines="`${sign}unignore me`" :sign="sign" />.
     </p>
-    <VxTable class="vx-panel" :columns="columns" :rows="ignored" :row-key="(u) => `${u.everywhere}${u.userId}`" label="Ignored users">
+    <VxTable wrap class="vx-panel" :columns="columns" :rows="ignored" :row-key="(u) => `${u.everywhere}${u.userId}`" label="Ignored users">
       <template #cell-login="{ row }">
         <span v-if="row.login">@{{ row.login }}</span>
         <span v-else class="vx-mono">{{ row.userId }}</span>

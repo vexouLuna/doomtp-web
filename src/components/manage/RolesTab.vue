@@ -2,7 +2,7 @@
 // A channel's custom roles and who holds them, as `role` manages them in chat: a role ranks between the built-in
 // ones, commands can require it, and a member can hold it for a while or until removed. The bot decides what the
 // session may touch (`manageable`): roles ranked below its own, any of them for the broadcaster.
-import { VxButton, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxSelect, VxStepper, timeAgo } from '@vex/ui'
+import { VxButton, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxSelect, VxStepper, VxTable, timeAgo, type TableColumn } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -58,6 +58,11 @@ async function give() {
 }
 const deleting = ref<string | null>(null)
 const expires = (at: number | null) => (at ? `until ${new Date(at).toLocaleString()}` : 'until removed')
+const MEMBER_COLUMNS: TableColumn[] = [
+  { key: 'member', label: 'Member', mono: true },
+  { key: 'ends', label: 'Ends', muted: true, class: 'small' },
+  { key: 'actions', label: '', class: 'end' },
+]
 </script>
 
 <template>
@@ -84,23 +89,19 @@ const expires = (at: number | null) => (at ? `until ${new Date(at).toLocaleStrin
               <VxButton v-if="!r.global" size="sm" variant="ghost" @click="deleting = r.name">Delete</VxButton>
             </template>
           </div>
-          <table v-if="r.members.length" class="vx-table members">
-            <tbody>
-              <tr v-for="m in r.members" :key="m.user_id">
-                <td class="vx-mono"><UserRef :id="m.user_id" :login="m.login" /></td>
-                <td class="vx-muted small" :title="expires(m.expires_at)">{{ m.expires_at ? `ends ${timeAgo(m.expires_at)}` : 'until removed' }}</td>
-                <td class="end">
-                  <VxButton
-                    v-if="r.manageable"
-                    size="sm"
-                    variant="ghost"
-                    :loading="busy.has(`m:${r.name}:${m.user_id}`)"
-                    @click="act(`m:${r.name}:${m.user_id}`, () => admin.revokeRole(login, r.name, m.login ?? m.user_id), `Took ${r.name} from @${m.login ?? m.user_id}`)"
-                  >Remove</VxButton>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <VxTable wrap headless v-if="r.members.length" class="members" :columns="MEMBER_COLUMNS" :rows="r.members" row-key="user_id">
+            <template #cell-member="{ row: m }"><UserRef :id="m.user_id" :login="m.login" /></template>
+            <template #cell-ends="{ row: m }"><span :title="expires(m.expires_at)">{{ m.expires_at ? `ends ${timeAgo(m.expires_at)}` : 'until removed' }}</span></template>
+            <template #cell-actions="{ row: m }">
+              <VxButton
+                v-if="r.manageable"
+                size="sm"
+                variant="ghost"
+                :loading="busy.has(`m:${r.name}:${m.user_id}`)"
+                @click="act(`m:${r.name}:${m.user_id}`, () => admin.revokeRole(login, r.name, m.login ?? m.user_id), `Took ${r.name} from @${m.login ?? m.user_id}`)"
+              >Remove</VxButton>
+            </template>
+          </VxTable>
           <p v-else class="vx-muted small none">Nobody holds it.</p>
         </div>
 

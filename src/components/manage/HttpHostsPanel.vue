@@ -75,7 +75,7 @@ const saveLimits = () => act('limits', () => admin.setHttpLimits(limitsPatch.val
   <div class="mtab">
     <VxLoadState :error="error" :stale="!!data" :loading="!data" error-title="Couldn't load the HTTP hosts" :error-text="errorText" :rows="3" @retry="reload">
       <template v-if="data">
-        <VxTable class="vx-panel" :columns="COLUMNS" :rows="data.hosts" row-key="pattern" label="HTTP hosts">
+        <VxTable wrap class="vx-panel" :columns="COLUMNS" :rows="data.hosts" row-key="pattern" label="HTTP hosts">
           <template #cell-plain_http="{ row }"><VxChip :tone="row.plain_http ? 'warn' : 'default'">{{ row.plain_http ? 'http too' : 'https' }}</VxChip></template>
           <template #cell-secret="{ row }">
             <span v-if="row.secret" class="vx-mono">{{ row.secret.kind }} {{ row.secret.name }}</span>

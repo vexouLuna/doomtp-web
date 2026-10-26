@@ -2,7 +2,7 @@
 // One of your packs' own triggers (ADR-0032), as `cc pack trigger` manages them in chat. They fire in every channel
 // where the pack is published and its module is on, at everyone's rank, and may call only the pack's public commands
 // and the built-ins. A pack's clock fires at most every 15 minutes, and a pack has at most 10 triggers.
-import { VxButton, VxCheckbox, VxChip, VxConfirm, VxDialog, VxField, VxInput, VxRadioGroup, VxSelect, VxStepper, VxSwitch } from '@vex/ui'
+import { VxButton, VxCheckbox, VxChip, VxConfirm, VxDialog, VxField, VxInput, VxRadioGroup, VxSelect, VxStepper, VxSwitch, VxTable, type TableColumn } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import ChatLine from '@/components/ChatLine.vue'
 import { admin, NO_CHATTER, PACK_MIN_EVERY_S, TRIGGER_EVENTS, type MyPack, type PackTrigger, type PackTriggerBody } from '@/lib/admin'
@@ -102,6 +102,14 @@ async function save() {
 }
 const deleting = ref<string | null>(null)
 const where = computed(() => (props.pack.published.length ? 'wherever the pack is published' : 'once the pack is published'))
+const TRIGGER_COLUMNS: TableColumn[] = [
+  { key: 'key', label: 'Key', mono: true, nowrap: true },
+  { key: 'type', label: 'Type' },
+  { key: 'matches', label: 'Matches', mono: true, muted: true, class: 'wrap' },
+  { key: 'expression', label: 'Expression', class: 'wrap' },
+  { key: 'on', label: 'On' },
+  { key: 'actions', label: '', nowrap: true, class: 'end' },
+]
 </script>
 
 <template>
@@ -113,33 +121,27 @@ const where = computed(() => (props.pack.published.length ? 'wherever the pack i
     <p v-if="!triggers.length" class="vx-muted small">
       None yet. A trigger runs on its own {{ where }}, on a chat line, a Twitch event or a clock.
     </p>
-    <div v-else class="table-scroll">
-      <table class="vx-table">
-        <tbody>
-          <tr v-for="t in triggers" :key="t.key">
-            <td class="vx-mono nowrap">{{ t.key }}</td>
-            <td><VxChip :tone="t.type === 'timer' || t.type === 'cron' ? 'default' : 'accent'">{{ t.type }}</VxChip></td>
-            <td class="vx-mono vx-muted wrap">
-              {{ matches(t) }}
-              <div v-if="conditions(t)" class="small">{{ conditions(t) }}</div>
-              <div v-if="cooldowns(t)" class="small">{{ cooldowns(t) }}</div>
-            </td>
-            <td class="wrap"><ChatLine :lines="t.expr" sign="!" context="body" /></td>
-            <td>
-              <VxSwitch
-                :model-value="t.enabled"
-                :disabled="busy.has(`pt:${t.key}`)"
-                @update:model-value="(on: boolean) => act(`pt:${t.key}`, () => admin.editPackTrigger(pack.name, t.key, { enabled: on }), `${pack.name} trigger ${t.key} turned ${onOff(on)}`)"
-              ><span class="sr-only">{{ t.key }}</span></VxSwitch>
-            </td>
-            <td class="end nowrap">
-              <VxButton size="sm" variant="ghost" @click="openEdit(t)">Edit</VxButton>
-              <VxButton size="sm" variant="ghost" @click="deleting = t.key">Delete</VxButton>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <VxTable v-else wrap headless :columns="TRIGGER_COLUMNS" :rows="triggers" row-key="key">
+      <template #cell-key="{ row: t }">{{ t.key }}</template>
+      <template #cell-type="{ row: t }"><VxChip :tone="t.type === 'timer' || t.type === 'cron' ? 'default' : 'accent'">{{ t.type }}</VxChip></template>
+      <template #cell-matches="{ row: t }">
+        {{ matches(t) }}
+        <div v-if="conditions(t)" class="small">{{ conditions(t) }}</div>
+        <div v-if="cooldowns(t)" class="small">{{ cooldowns(t) }}</div>
+      </template>
+      <template #cell-expression="{ row: t }"><ChatLine :lines="t.expr" sign="!" context="body" /></template>
+      <template #cell-on="{ row: t }">
+        <VxSwitch
+          :model-value="t.enabled"
+          :disabled="busy.has(`pt:${t.key}`)"
+          @update:model-value="(on: boolean) => act(`pt:${t.key}`, () => admin.editPackTrigger(pack.name, t.key, { enabled: on }), `${pack.name} trigger ${t.key} turned ${onOff(on)}`)"
+        ><span class="sr-only">{{ t.key }}</span></VxSwitch>
+      </template>
+      <template #cell-actions="{ row: t }">
+        <VxButton size="sm" variant="ghost" @click="openEdit(t)">Edit</VxButton>
+        <VxButton size="sm" variant="ghost" @click="deleting = t.key">Delete</VxButton>
+      </template>
+    </VxTable>
 
     <VxDialog v-model:open="open" :title="editing ? `Edit ${pack.name} trigger ${editing.key}` : `New trigger in ${pack.name}`" width="560px">
       <p class="vx-muted small intro">

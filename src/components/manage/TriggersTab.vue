@@ -3,7 +3,7 @@
 // edited and deleted as `trigger` and `timer` do in chat; one runs at its creator's rank at most. A listener's
 // pattern can be tried on a line of chat first. Its cooldowns (ADR-0031) are one for the whole channel and one per
 // chatter, as `listen|event|timer cooldown` sets them; triggers with no chatter take only the first.
-import { VxButton, VxCheckbox, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxRadioGroup, VxSelect, VxStepper, VxSwitch, useToast } from '@vex/ui'
+import { VxButton, VxCheckbox, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxRadioGroup, VxSelect, VxStepper, VxSwitch, VxTable, useToast, type TableColumn } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import ChatLine from '@/components/ChatLine.vue'
 import { can, rankIn } from '@/lib/access'
@@ -161,6 +161,18 @@ async function test() {
   }
 }
 const toast = useToast()
+
+const COLUMNS: TableColumn[] = [
+  { key: 'type', label: 'Type' },
+  { key: 'match', label: 'Matches', mono: true, muted: true, class: 'wrap' },
+  { key: 'expr', label: 'Expression', class: 'wrap' },
+  { key: 'run_as_rank', label: 'Runs as', muted: true, nowrap: true },
+  { key: 'log_level', label: 'Log', muted: true },
+  { key: 'enabled', label: 'On' },
+  { key: 'actions', label: '', class: 'end' },
+]
+// A pack's trigger is turned off with its module: its note takes the On and actions cells.
+const span = (t: Trigger, c: TableColumn) => (t.pack && c.key === 'enabled' ? 2 : undefined)
 </script>
 
 <template>
@@ -174,45 +186,39 @@ const toast = useToast()
         <ChatLine :lines="`${sign}timer add 15m <expression>`" :sign="sign" />.
       </template>
     </VxEmptyState>
-    <div v-else class="table-scroll vx-panel">
-      <table class="vx-table">
-        <thead><tr><th>Type</th><th>Matches</th><th>Expression</th><th>Runs as</th><th>Log</th><th>On</th><th></th></tr></thead>
-        <tbody>
-          <tr v-for="t in triggers" :key="t.id">
-            <td>
-              <VxChip :tone="t.type === 'timer' || t.type === 'cron' ? 'default' : 'accent'">{{ t.type }}</VxChip>
-              <div v-if="t.pack" class="small vx-muted">{{ t.pack }} pack</div>
-            </td>
-            <td class="vx-mono vx-muted wrap">
-              {{ matches(t) }}
-              <div v-if="t.match.name" class="small">named {{ t.match.name }}</div>
-              <div v-if="conditions(t)" class="small">{{ conditions(t) }}</div>
-              <div v-if="cooldowns(t)" class="small">{{ cooldowns(t) }}</div>
-            </td>
-            <td class="wrap"><ChatLine :lines="t.expr" :sign="sign" context="body" /></td>
-            <td class="vx-muted nowrap">rank {{ t.run_as_rank }}</td>
-            <td class="vx-muted">{{ t.log_level ?? '' }}</td>
-            <td v-if="t.pack" colspan="2" class="vx-muted small pack-note">
-              From the {{ t.pack }} pack{{ t.enabled ? '' : ', which its owner turned off' }}. Turn it off here with the
-              {{ t.pack }} module on the Modules tab.
-            </td>
-            <td v-if="!t.pack">
-              <VxSwitch
-                :model-value="t.enabled"
-                :disabled="!can('triggers.edit', login) || busy.has(`t:${t.id}`)"
-                @update:model-value="(on: boolean) => act(`t:${t.id}`, () => admin.setTrigger(login, t.id, on), `${t.type} turned ${onOff(on)}`)"
-              ><span class="sr-only">{{ t.type }} {{ t.id }}</span></VxSwitch>
-            </td>
-            <td v-if="!t.pack" class="end">
-              <template v-if="can('triggers.edit', login)">
-                <VxButton size="sm" variant="ghost" @click="openEdit(t)">Edit</VxButton>
-                <VxButton size="sm" variant="ghost" @click="deleting = t.id">Delete</VxButton>
-              </template>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <VxTable v-else wrap class="vx-panel" :columns="COLUMNS" :rows="triggers" row-key="id" :span="span" label="Triggers and timers">
+      <template #cell-type="{ row: t }">
+        <VxChip :tone="t.type === 'timer' || t.type === 'cron' ? 'default' : 'accent'">{{ t.type }}</VxChip>
+        <div v-if="t.pack" class="small vx-muted">{{ t.pack }} pack</div>
+      </template>
+      <template #cell-match="{ row: t }">
+        {{ matches(t) }}
+        <div v-if="t.match.name" class="small">named {{ t.match.name }}</div>
+        <div v-if="conditions(t)" class="small">{{ conditions(t) }}</div>
+        <div v-if="cooldowns(t)" class="small">{{ cooldowns(t) }}</div>
+      </template>
+      <template #cell-expr="{ row: t }"><ChatLine :lines="t.expr" :sign="sign" context="body" /></template>
+      <template #cell-run_as_rank="{ value }">rank {{ value }}</template>
+      <template #cell-log_level="{ value }">{{ value ?? '' }}</template>
+      <template #cell-enabled="{ row: t }">
+        <span v-if="t.pack" class="vx-muted small pack-note">
+          From the {{ t.pack }} pack{{ t.enabled ? '' : ', which its owner turned off' }}. Turn it off here with the
+          {{ t.pack }} module on the Modules tab.
+        </span>
+        <VxSwitch
+          v-else
+          :model-value="t.enabled"
+          :disabled="!can('triggers.edit', login) || busy.has(`t:${t.id}`)"
+          @update:model-value="(on: boolean) => act(`t:${t.id}`, () => admin.setTrigger(login, t.id, on), `${t.type} turned ${onOff(on)}`)"
+        ><span class="sr-only">{{ t.type }} {{ t.id }}</span></VxSwitch>
+      </template>
+      <template #cell-actions="{ row: t }">
+        <template v-if="can('triggers.edit', login)">
+          <VxButton size="sm" variant="ghost" @click="openEdit(t)">Edit</VxButton>
+          <VxButton size="sm" variant="ghost" @click="deleting = t.id">Delete</VxButton>
+        </template>
+      </template>
+    </VxTable>
 
     <form v-if="triggers.some((t) => t.type === 'listener')" class="add vx-form-row vx-panel test" @submit.prevent="test">
       <VxField label="Try a chat line" help="Which listeners it would set off, and what their patterns capture. Nothing runs." class="grow">
@@ -311,7 +317,7 @@ const toast = useToast()
 
 <style scoped>
 .every { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.pack-note { max-width: 18rem; }
+.pack-note { display: block; max-width: 18rem; }
 .cooldowns { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 .test .result { flex-basis: 100%; display: grid; gap: 4px; overflow-wrap: anywhere; }
 </style>

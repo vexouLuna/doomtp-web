@@ -84,7 +84,7 @@ async function saveOwner() {
         </form>
 
         <h3 class="vx-eyebrow sub">Overrides</h3>
-        <VxTable class="vx-panel" :columns="COLUMNS" :rows="data.overrides" :row-key="(o) => `${o.owner_kind}/${o.owner_id}`" label="Limit overrides" empty="Every owner has the defaults.">
+        <VxTable wrap class="vx-panel" :columns="COLUMNS" :rows="data.overrides" :row-key="(o) => `${o.owner_kind}/${o.owner_id}`" label="Limit overrides" empty="Every owner has the defaults.">
           <template #cell-owner="{ row }"><span class="vx-muted">{{ row.owner_kind }}</span> <UserRef :id="row.owner_id" :login="row.owner_login" /></template>
           <template v-for="f in FIELDS" :key="f.key" #[`cell-${f.key}`]="{ row }">
             <span :class="{ 'vx-muted': row[f.key] === null || row[f.key] === undefined }">{{ show(f, row[f.key]) }}</span>

@@ -83,7 +83,7 @@ async function saveEcho() {
           <ChatLine :lines="`${sign}callback on_cooldown <expression>`" :sign="sign" /> in chat.
         </p>
         <VxEmptyState v-if="!data.callbacks.length" title="No replies" text="The bot stays quiet on cooldowns and refusals." />
-        <VxTable
+        <VxTable wrap
           v-else
           class="vx-panel"
           :columns="REPLY_COLUMNS"
@@ -116,7 +116,7 @@ async function saveEcho() {
           same as <ChatLine :lines="`${sign}customecho <command> <template>`" :sign="sign" /> in chat.
         </p>
         <VxEmptyState v-if="!data.echo.length" title="No custom wording" text="Readouts use their built-in wording." />
-        <VxTable v-else class="vx-panel" :columns="ECHO_COLUMNS" :rows="data.echo" row-key="command" label="Readouts">
+        <VxTable wrap v-else class="vx-panel" :columns="ECHO_COLUMNS" :rows="data.echo" row-key="command" label="Readouts">
           <template #cell-command="{ row: e }"><ChatLine :lines="`${sign}${e.command}`" :sign="sign" /></template>
           <template #cell-actions="{ row: e }">
             <template v-if="mayEdit">

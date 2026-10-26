@@ -99,7 +99,7 @@ const outcome = (r: MyRun): { label: string; tone: 'ok' | 'bad' | 'warn' } =>
           Storage: {{ usage('yours', data.storage.chatter) }} · {{ usage('your commands', data.storage.publisher) }}.
         </p>
         <VxEmptyState v-if="!data.variables?.length" title="No variables yet" text="They appear once a command saves something for you." />
-        <VxTable v-else class="vx-panel" :columns="VAR_COLUMNS" :rows="variables" label="Your variables">
+        <VxTable wrap v-else class="vx-panel" :columns="VAR_COLUMNS" :rows="variables" label="Your variables">
           <template #cell-name="{ row: v }">{{ fullName(v) }}</template>
           <template #cell-channel="{ row: v }">{{ v.channel ? `#${v.channel}` : 'everywhere' }}</template>
           <template #cell-value="{ row: v }">{{ shown(v.value) }}</template>
@@ -116,7 +116,7 @@ const outcome = (r: MyRun): { label: string; tone: 'ok' | 'bad' | 'warn' } =>
 
       <template v-else-if="data">
         <VxEmptyState v-if="!data.runs?.length" title="Nothing ran for you yet" text="Commands you run in chat show up here, in every channel." />
-        <VxTable v-else class="vx-panel" :columns="RUN_COLUMNS" :rows="runs" label="Your runs">
+        <VxTable wrap v-else class="vx-panel" :columns="RUN_COLUMNS" :rows="runs" label="Your runs">
           <template #cell-at="{ row: r }"><span :title="new Date(r.at).toLocaleString()">{{ timeAgo(r.at) }}</span></template>
           <template #cell-channel="{ row: r }">#{{ r.channel ?? r.channel_id }}</template>
           <template #cell-expr="{ row: r }"><ChatLine :lines="r.expr" sign="!" context="body" /></template>

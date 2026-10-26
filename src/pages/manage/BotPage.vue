@@ -122,7 +122,7 @@ const KEY_COLUMNS: TableColumn[] = [
       <template v-if="data">
         <section>
           <h2 class="vx-eyebrow sec">Health</h2>
-          <VxTable class="vx-panel" :columns="HEALTH_COLUMNS" :rows="components" row-key="name" label="Health">
+          <VxTable wrap class="vx-panel" :columns="HEALTH_COLUMNS" :rows="components" row-key="name" label="Health">
             <template #cell-status="{ row: c }"><VxChip :tone="tone(c.status)">{{ c.status }}</VxChip></template>
             <template #cell-detail="{ row: c }"><span class="detail">{{ c.detail }}</span></template>
           </VxTable>
@@ -147,7 +147,7 @@ const KEY_COLUMNS: TableColumn[] = [
             <code>/api/v2</code> ones (jobs, audit, chat log) are in <a href="/api/v2/docs">their own Swagger UI</a>, open to
             anyone signed in.
           </p>
-          <VxTable class="vx-panel" :columns="KEY_COLUMNS" :rows="data.keys" row-key="id" label="API keys" empty="No keys yet.">
+          <VxTable wrap class="vx-panel" :columns="KEY_COLUMNS" :rows="data.keys" row-key="id" label="API keys" empty="No keys yet.">
             <template #cell-scopes="{ row: k }"><VxChip v-for="s in k.scopes" :key="s" :tone="s === 'write' ? 'warn' : 'default'">{{ s }}</VxChip></template>
             <template #cell-created_at="{ row: k }">{{ timeAgo(k.created_at) }}</template>
             <template #cell-last_used_at="{ row: k }">{{ timeAgo(k.last_used_at) }}</template>

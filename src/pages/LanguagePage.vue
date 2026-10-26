@@ -99,7 +99,7 @@ const limits = computed(() => {
         <li>Only the final result is sent to chat.</li>
       </ul>
 
-      <VxLoadState :error="error" :stale="!!data" :loading="!data" error-title="Couldn't load the language details" :error-text="errorText" :rows="6" row-height="28px" @retry="reload">
+      <VxLoadState :error="error" :stale="!!data" :loading="!data" error-title="Couldn't load the language details" :error-text="errorText" :rows="6" row-height="28px" margin="0 0 12px" @retry="reload">
         <template v-if="data">
           <h2 class="vx-display">Operators</h2>
           <p>
