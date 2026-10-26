@@ -75,12 +75,12 @@ const START = [
       <RouterLink v-for="ch in site.info.channels" :key="ch.login" :to="`/channels/${ch.login}`" class="card chan vx-panel">
         <div class="chan-top">
           <b class="chan-name" :title="`#${ch.login}`">#{{ ch.login }}</b>
-          <span class="chips">
-            <VxChip :tone="ch.tier === 'full' ? 'ok' : 'default'">{{ ch.tier }}</VxChip>
-            <VxChip v-if="ch.read_only" tone="warn" title="It keeps logging but never sends a message here">Bot speaks: off</VxChip>
-          </span>
+          <VxChip :tone="ch.tier === 'full' ? 'ok' : 'default'">{{ ch.tier }}</VxChip>
         </div>
-        <div class="vx-muted small vx-mono">sign <code>{{ ch.prefix }}</code></div>
+        <div class="chan-meta vx-muted small vx-mono">
+          <span>sign <code>{{ ch.prefix }}</code></span>
+          <VxChip v-if="ch.read_only" tone="warn" title="It keeps logging but never sends a message here">Bot speaks: off</VxChip>
+        </div>
       </RouterLink>
     </div>
   </DtpShell>
@@ -98,11 +98,12 @@ const START = [
 .card { padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; color: inherit; min-width: 0; }
 .card:hover { border-color: var(--vx-accent); color: inherit; }
 .card b { color: var(--vx-ink); }
-.chan-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 8px; min-width: 0; }
-/* A small basis, so the name ellipsizes beside a wide tier chip ("moderator") on the narrowest cards instead of
-   pushing it onto a second line; only two chips wrap there. */
-.chan-name { flex: 1 1 4rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; flex-shrink: 0; }
+/* Two lines on every card, neither wraps: the name ellipsizes beside its tier chip, and the read-only chip sits by
+   the sign with room kept for it (a VxChip's height), so no width, name or font scale changes a card's height. */
+.chan-top, .chan-meta { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.chan-name { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chan-top .vx-chip { flex: none; }
+.chan-meta { justify-content: space-between; min-height: calc(11px * 1.7 + 2px); }
 .small { font-size: 12px; }
 code { font-family: var(--vx-font-mono); }
 @container vx-site (max-width: 700px) {
