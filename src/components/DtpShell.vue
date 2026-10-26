@@ -4,7 +4,7 @@
 import { VxSiteFooter, VxSiteShell } from '@vex/ui'
 import type { NavItem } from '@vex/ui'
 import { useAccount } from '@vex/ui/account'
-import { onMounted, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { bounceOnce, ensure, session } from '@/lib/session'
 import { loadSite, site } from '@/lib/site'
@@ -12,15 +12,18 @@ import AccountMenu from './AccountMenu.vue'
 
 withDefaults(defineProps<{ sky?: 'full' | 'dim' | 'off' }>(), { sky: 'full' })
 
-const NAV: NavItem[] = [
+const account = useAccount()
+const route = useRoute()
+
+// RouterLink marks only an exact match, so Channels is set current by hand to stay lit on a channel's own page.
+const nav = computed<NavItem[]>(() => [
   { label: 'Features', to: '/docs/features' },
   { label: 'Commands', to: '/docs/commands' },
   { label: 'Language', to: '/docs/language' },
   { label: 'API', to: '/docs/api' },
-]
-
-const account = useAccount()
-const route = useRoute()
+  { label: 'Channels', to: '/channels', current: route.path.startsWith('/channels') },
+  { label: 'Stats', to: '/stats' },
+])
 
 onMounted(() => {
   loadSite()
@@ -37,7 +40,7 @@ watch(
 </script>
 
 <template>
-  <VxSiteShell site="dtp" :nav="NAV" :sky="sky">
+  <VxSiteShell site="dtp" :nav="nav" :sky="sky">
     <template #account><AccountMenu /></template>
     <slot></slot>
     <template #footer>
