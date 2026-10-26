@@ -5,6 +5,7 @@ import './styles.css'
 import '@vex/ui/platform.css'
 
 import { twitchUserLookup } from '@vex/platform-web/chat'
+import { signInTarget } from '@vex/platform-web'
 import { createPlatformUi } from '@vex/platform-web/vue'
 import { VxBuild, useToast } from '@vex/ui'
 import { createApp } from 'vue'
@@ -63,12 +64,13 @@ setExpiredHandler(() => {
 router.beforeEach(async (to) => {
   if (!to.path.startsWith('/manage')) return true
   await ensure()
-  if (session.authenticated) return true
-  if (session.twitchLogin && !session.notice) {
-    window.location.assign(twitchLoginUrl(to.fullPath))
+  const target = signInTarget(session, to.fullPath, twitchLoginUrl)
+  if (!target) return true
+  if ('href' in target) {
+    window.location.assign(target.href)
     return false
   }
-  return { path: '/admin/login', query: { next: to.fullPath } }
+  return { path: '/admin/login', query: { next: target.next } }
 })
 
 createApp(App)

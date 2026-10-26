@@ -2,7 +2,7 @@
 // What reaches every channel, for bot admins: the admins themselves (`admin add|remove`, bot owners only), the
 // bot-wide module toggles and command rules every channel inherits, the bot-wide word filter, who is ignored
 // everywhere, and the commands and packs published everywhere.
-import { VxButton, VxCallout, VxChip, VxDialog, VxField, VxInput, VxSegmented, VxSkeleton } from '@vex/ui'
+import { VxButton, VxChip, VxConfirm, VxField, VxInput, VxLoadState, VxSegmented, VxTable, type TableColumn } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -111,7 +111,36 @@ async function publish() {
   if (ok) Object.assign(publishing, { command: '', as: '', pack: '', owner: '' })
 }
 const mayPublish = computed(() => (publishing.mode === 'command' ? !!publishing.command.trim() : !!publishing.pack.trim()))
-const unpublishing = ref<{ kind: 'command' | 'pack'; name: string; owner?: string } | null>(null)
+const MODULE_COLUMNS: TableColumn[] = [
+  { key: 'module', label: 'Module', mono: true },
+  { key: 'kind', label: 'Kind', muted: true },
+  { key: 'enabled', label: 'Everywhere' },
+]
+const PUBLISHED_COLUMNS: TableColumn[] = [
+  { key: 'name', label: 'Name' },
+  { key: 'owner', label: 'Owner', muted: true },
+  { key: 'what', label: 'What', muted: true },
+  { key: 'actions', label: '', align: 'right', nowrap: true },
+]
+type Unpublishing = { kind: 'command' | 'pack'; name: string; owner?: string }
+/** Commands and packs published everywhere, as one list. */
+const published = computed(() => [
+  ...(data.value?.published ?? []).map((c) => ({
+    key: `c:${c.published_as}`,
+    name: c.published_as,
+    owner: c.owner,
+    what: c.summary ?? (c.name !== c.published_as ? `as ${c.name}` : 'command'),
+    unpublish: { kind: 'command', name: c.published_as } as Unpublishing,
+  })),
+  ...(data.value?.packs ?? []).map((p) => ({
+    key: `p:${p.name}:${p.commands[0]?.owner}`,
+    name: p.name,
+    owner: p.commands[0]?.owner ?? '',
+    what: p.summary ?? `${p.commands.length} commands`,
+    unpublish: { kind: 'pack', name: p.name, owner: p.commands[0]?.owner } as Unpublishing,
+  })),
+])
+const unpublishing = ref<Unpublishing | null>(null)
 function unpublish() {
   const u = unpublishing.value
   if (!u) return
@@ -124,156 +153,130 @@ function unpublish() {
   <section>
     <h2 class="vx-eyebrow sec">Every channel</h2>
     <p class="vx-muted small">What every channel inherits, as the <code>global</code> forms of the chat commands.</p>
-    <VxCallout v-if="error" tone="error" title="Couldn't load the bot-wide settings">
-      {{ errorText(error) }}
-      <template #actions><VxButton size="sm" @click="reload">Try again</VxButton></template>
-    </VxCallout>
-    <div v-else-if="!data" class="loading" aria-busy="true"><VxSkeleton v-for="i in 5" :key="i" h="38px" /></div>
-    <template v-else>
-      <VxSegmented v-model="section" :options="SECTIONS" label="Bot-wide settings" class="pick" />
+    <VxLoadState :error="error" :stale="!!data" :loading="!data" error-title="Couldn't load the bot-wide settings" :error-text="errorText" :rows="5" @retry="reload">
+      <template v-if="data">
+        <VxSegmented v-model="section" :options="SECTIONS" label="Bot-wide settings" class="pick" />
 
-      <template v-if="section === 'admins'">
-        <p class="vx-muted small">
-          Bot admins manage every channel and this page. Owners are set in the bot's configuration; only an owner adds
-          or removes admins, as with <code>admin add</code> in chat.
-        </p>
-        <div class="table-scroll vx-panel">
-          <table class="vx-table">
-            <tbody>
-              <tr v-for="u in data.admins.owners" :key="u.user_id">
-                <td class="vx-mono">{{ name(u) }}</td>
-                <td><VxChip tone="accent">owner</VxChip></td>
-                <td></td>
-              </tr>
-              <tr v-for="u in data.admins.admins" :key="u.user_id">
-                <td class="vx-mono">{{ name(u) }}</td>
-                <td><VxChip>admin</VxChip></td>
-                <td class="end">
-                  <VxButton v-if="data.admins.you_manage" size="sm" variant="ghost" @click="removing = u">Remove</VxButton>
-                </td>
-              </tr>
-              <tr v-if="!data.admins.owners.length && !data.admins.admins.length"><td colspan="3" class="vx-muted">No bot admins are set: only the admin password manages the bot.</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <form v-if="data.admins.you_manage" class="row" @submit.prevent="addAdmin">
-          <label class="sr-only" for="admin-login">Twitch login to make an admin</label>
-          <VxInput id="admin-login" v-model="adminLogin" placeholder="twitch login" mono grow width="12rem" max-width="20rem" />
-          <VxButton type="submit" :loading="busy.has('admin')" :disabled="!adminLogin.trim()">Add admin</VxButton>
-        </form>
+        <template v-if="section === 'admins'">
+          <p class="vx-muted small">
+            Bot admins manage every channel and this page. Owners are set in the bot's configuration; only an owner adds
+            or removes admins, as with <code>admin add</code> in chat.
+          </p>
+          <div class="table-scroll vx-panel">
+            <table class="vx-table">
+              <tbody>
+                <tr v-for="u in data.admins.owners" :key="u.user_id">
+                  <td class="vx-mono">{{ name(u) }}</td>
+                  <td><VxChip tone="accent">owner</VxChip></td>
+                  <td></td>
+                </tr>
+                <tr v-for="u in data.admins.admins" :key="u.user_id">
+                  <td class="vx-mono">{{ name(u) }}</td>
+                  <td><VxChip>admin</VxChip></td>
+                  <td class="end">
+                    <VxButton v-if="data.admins.you_manage" size="sm" variant="ghost" @click="removing = u">Remove</VxButton>
+                  </td>
+                </tr>
+                <tr v-if="!data.admins.owners.length && !data.admins.admins.length"><td colspan="3" class="vx-muted">No bot admins are set: only the admin password manages the bot.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <form v-if="data.admins.you_manage" class="row" @submit.prevent="addAdmin">
+            <label class="sr-only" for="admin-login">Twitch login to make an admin</label>
+            <VxInput id="admin-login" v-model="adminLogin" placeholder="twitch login" mono grow width="12rem" max-width="20rem" />
+            <VxButton type="submit" :loading="busy.has('admin')" :disabled="!adminLogin.trim()">Add admin</VxButton>
+          </form>
+        </template>
+
+        <template v-else-if="section === 'modules'">
+          <p class="vx-muted small">
+            "Each channel" leaves a module to the channels (on unless one turns it off). On or off here applies wherever a
+            channel hasn't set its own.
+          </p>
+          <VxTable class="vx-panel" :columns="MODULE_COLUMNS" :rows="data.modules" row-key="module" label="Modules everywhere">
+            <template #cell-enabled="{ row }">
+              <VxSegmented
+                v-if="row.toggleable"
+                :model-value="moduleState(row.enabled)"
+                :options="MODULE_STATES"
+                :label="`${row.module} everywhere`"
+                :disabled="busy.has(`m:${row.module}`)"
+                @update:model-value="(v?: string) => v && setModule(row.module, v)"
+              />
+              <span v-else class="vx-muted">always on</span>
+            </template>
+          </VxTable>
+        </template>
+
+        <RulesTab v-else-if="section === 'rules'" :login="null" :sign="sign" :commands="data.commands" :reference="data.reference" :roles="data.roles" :reload="reload" />
+
+        <FilterTab v-else-if="section === 'filter'" :login="null" :filters="data.filters" :reload="reload" />
+
+        <IgnoredTab v-else-if="section === 'ignored'" :login="data.anchor" :sign="sign" :ignored="data.ignored" :reload="reload" everywhere />
+
+        <template v-else>
+          <p class="vx-muted small">
+            Commands and packs every channel has, as <code>cc publish &lt;name&gt; global</code> does in chat. A channel still
+            turns them off for itself.
+          </p>
+          <VxTable class="vx-panel" :columns="PUBLISHED_COLUMNS" :rows="published" row-key="key" label="Published everywhere">
+            <template #cell-name="{ row }"><span class="vx-mono">{{ row.name }}</span> <VxChip v-if="row.unpublish.kind === 'pack'">pack</VxChip></template>
+            <template #cell-actions="{ row }"><VxButton size="sm" variant="ghost" @click="unpublishing = row.unpublish">Unpublish</VxButton></template>
+            <template #empty>Nothing is published everywhere.</template>
+          </VxTable>
+          <form class="publish vx-panel" @submit.prevent="publish">
+            <VxSegmented v-model="publishing.mode" :options="PUBLISH_MODES" label="What to publish" />
+            <template v-if="publishing.mode === 'command'">
+              <VxField label="Your command" help="One of your commands, or one you linked.">
+                <template #default="{ id }"><VxInput :id="id" v-model="publishing.command" mono /></template>
+              </VxField>
+              <VxField label="As" help="Optional: the name channels type.">
+                <template #default="{ id }"><VxInput :id="id" v-model="publishing.as" mono /></template>
+              </VxField>
+            </template>
+            <template v-else>
+              <VxField label="Pack">
+                <template #default="{ id }"><VxInput :id="id" v-model="publishing.pack" mono /></template>
+              </VxField>
+              <VxField label="Owner" help="Empty for your own; someone else's needs every command in it shared.">
+                <template #default="{ id }"><VxInput :id="id" v-model="publishing.owner" mono placeholder="twitch login" /></template>
+              </VxField>
+            </template>
+            <div><VxButton type="submit" variant="primary" :loading="busy.has('publish')" :disabled="!mayPublish">Publish everywhere</VxButton></div>
+          </form>
+        </template>
       </template>
+    </VxLoadState>
 
-      <template v-else-if="section === 'modules'">
-        <p class="vx-muted small">
-          "Each channel" leaves a module to the channels (on unless one turns it off). On or off here applies wherever a
-          channel hasn't set its own.
-        </p>
-        <div class="table-scroll vx-panel">
-          <table class="vx-table">
-            <thead><tr><th>Module</th><th>Kind</th><th>Everywhere</th></tr></thead>
-            <tbody>
-              <tr v-for="m in data.modules" :key="m.module">
-                <td class="vx-mono">{{ m.module }}</td>
-                <td class="vx-muted">{{ m.kind ?? '' }}</td>
-                <td>
-                  <VxSegmented
-                    v-if="m.toggleable"
-                    :model-value="moduleState(m.enabled)"
-                    :options="MODULE_STATES"
-                    :label="`${m.module} everywhere`"
-                    :disabled="busy.has(`m:${m.module}`)"
-                    @update:model-value="(v?: string) => v && setModule(m.module, v)"
-                  />
-                  <span v-else class="vx-muted">always on</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </template>
-
-      <RulesTab v-else-if="section === 'rules'" :login="null" :sign="sign" :commands="data.commands" :reference="data.reference" :roles="data.roles" :reload="reload" />
-
-      <FilterTab v-else-if="section === 'filter'" :login="null" :filters="data.filters" :reload="reload" />
-
-      <IgnoredTab v-else-if="section === 'ignored'" :login="data.anchor" :sign="sign" :ignored="data.ignored" :reload="reload" everywhere />
-
-      <template v-else>
-        <p class="vx-muted small">
-          Commands and packs every channel has, as <code>cc publish &lt;name&gt; global</code> does in chat. A channel still
-          turns them off for itself.
-        </p>
-        <div class="table-scroll vx-panel">
-          <table class="vx-table">
-            <thead><tr><th>Name</th><th>Owner</th><th>What</th><th></th></tr></thead>
-            <tbody>
-              <tr v-for="c in data.published" :key="`c:${c.published_as}`">
-                <td class="vx-mono">{{ c.published_as }}</td>
-                <td class="vx-muted">{{ c.owner }}</td>
-                <td class="vx-muted">{{ c.summary ?? (c.name !== c.published_as ? `as ${c.name}` : 'command') }}</td>
-                <td class="end"><VxButton size="sm" variant="ghost" @click="unpublishing = { kind: 'command', name: c.published_as }">Unpublish</VxButton></td>
-              </tr>
-              <tr v-for="p in data.packs" :key="`p:${p.name}:${p.commands[0]?.owner}`">
-                <td class="vx-mono">{{ p.name }} <VxChip>pack</VxChip></td>
-                <td class="vx-muted">{{ p.commands[0]?.owner ?? '' }}</td>
-                <td class="vx-muted">{{ p.summary ?? `${p.commands.length} commands` }}</td>
-                <td class="end">
-                  <VxButton size="sm" variant="ghost" @click="unpublishing = { kind: 'pack', name: p.name, owner: p.commands[0]?.owner }">Unpublish</VxButton>
-                </td>
-              </tr>
-              <tr v-if="!data.published.length && !data.packs.length"><td colspan="4" class="vx-muted">Nothing is published everywhere.</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <form class="publish vx-panel" @submit.prevent="publish">
-          <VxSegmented v-model="publishing.mode" :options="PUBLISH_MODES" label="What to publish" />
-          <template v-if="publishing.mode === 'command'">
-            <VxField label="Your command" help="One of your commands, or one you linked.">
-              <template #default="{ id }"><VxInput :id="id" v-model="publishing.command" mono /></template>
-            </VxField>
-            <VxField label="As" help="Optional: the name channels type.">
-              <template #default="{ id }"><VxInput :id="id" v-model="publishing.as" mono /></template>
-            </VxField>
-          </template>
-          <template v-else>
-            <VxField label="Pack">
-              <template #default="{ id }"><VxInput :id="id" v-model="publishing.pack" mono /></template>
-            </VxField>
-            <VxField label="Owner" help="Empty for your own; someone else's needs every command in it shared.">
-              <template #default="{ id }"><VxInput :id="id" v-model="publishing.owner" mono placeholder="twitch login" /></template>
-            </VxField>
-          </template>
-          <div><VxButton type="submit" variant="primary" :loading="busy.has('publish')" :disabled="!mayPublish">Publish everywhere</VxButton></div>
-        </form>
-      </template>
-    </template>
-
-    <VxDialog :open="removing !== null" :title="`Remove ${removing ? name(removing) : ''} as a bot admin?`" @update:open="(v: boolean) => { if (!v) removing = null }">
+    <VxConfirm
+      :open="removing !== null"
+      :title="`Remove ${removing ? name(removing) : ''} as a bot admin?`"
+      @update:open="(v: boolean) => { if (!v) removing = null }"
+      confirm-label="Remove"
+      tone="danger"
+      :loading="busy.has('rm-admin')"
+      @confirm="act('rm-admin', () => admin.removeAdmin(removing!.user_id), `${name(removing!)} is no longer an admin`).then(() => (removing = null))"
+    >
       They keep whatever they have in their own and moderated channels.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton
-          variant="danger-solid"
-          :loading="busy.has('rm-admin')"
-          @click="act('rm-admin', () => admin.removeAdmin(removing!.user_id), `${name(removing!)} is no longer an admin`).then(() => (removing = null))"
-        >Remove</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
 
-    <VxDialog :open="unpublishing !== null" :title="`Unpublish ${unpublishing?.name} everywhere?`" @update:open="(v: boolean) => { if (!v) unpublishing = null }">
+    <VxConfirm
+      :open="unpublishing !== null"
+      :title="`Unpublish ${unpublishing?.name} everywhere?`"
+      @update:open="(v: boolean) => { if (!v) unpublishing = null }"
+      confirm-label="Unpublish"
+      tone="danger"
+      :loading="busy.has('unpublish')"
+      @confirm="unpublish"
+    >
       Channels lose it at once, unless they published it themselves.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton variant="danger-solid" :loading="busy.has('unpublish')" @click="unpublish">Unpublish</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
   </section>
 </template>
 
 <style scoped>
 .sec { margin: 0 0 8px; }
 .small { font-size: 13px; margin: 0 0 8px; }
-.loading { display: grid; gap: 6px; }
 .pick { margin: 6px 0 14px; max-width: 100%; overflow-x: auto; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 6px; }
 .end { text-align: right; }

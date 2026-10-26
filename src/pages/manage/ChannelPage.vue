@@ -2,7 +2,7 @@
 // One channel: its status, tier and capabilities, the ban callout with rejoin, and a tab per area (components/manage).
 // Every change goes through the same services as chat. The tabs that page through their own data (variables, runs,
 // the chat log, the audit) load it themselves; the rest share one load here and ask for it again after a change.
-import { VxButton, VxCallout, VxChip, VxDialog, VxSkeleton, VxTabs, useToast } from '@vex/ui'
+import { VxButton, VxCallout, VxChip, VxConfirm, VxLoadState, VxTabs, useToast } from '@vex/ui'
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useResource } from '@vex/ui/utils'
@@ -159,98 +159,102 @@ async function part() {
       a moderator there just now, reload this page in a little while.
       <template #actions><RouterLink to="/manage" class="vx-btn is-sm">Your channels</RouterLink></template>
     </VxCallout>
-    <VxCallout v-else-if="error" tone="error" :title="status === 404 ? `The bot doesn't know #${login}` : `Couldn't load #${login}`">
+    <VxCallout v-else-if="error && !data" tone="error" :title="status === 404 ? `The bot doesn't know #${login}` : `Couldn't load #${login}`">
       {{ errorText(error) }}
       <template #actions>
         <RouterLink v-if="status === 404" to="/manage" class="vx-btn is-sm">All channels</RouterLink>
         <VxButton v-else size="sm" @click="reload">Try again</VxButton>
       </template>
     </VxCallout>
-    <div v-else-if="!data" class="loading" aria-busy="true"><VxSkeleton v-for="i in 8" :key="i" h="38px" /></div>
-    <template v-else>
-      <div class="chips">
-        <VxChip k="sign"><ChatLine :lines="sign" :sign="sign" /></VxChip>
-        <VxChip v-for="c in statusChips" :key="c.k" :k="c.k" :tone="c.tone">{{ c.v }}</VxChip>
-      </div>
-      <div class="chips caps" :aria-label="`What the bot may do in #${login}`">
-        <span class="vx-muted small">Twitch permissions:</span>
-        <VxChip v-for="cap in data.channel.capabilities" :key="cap">{{ cap }}</VxChip>
-        <span v-if="!data.channel.capabilities.length" class="vx-muted small">none beyond chat</span>
-        <VxButton v-if="can('channel.probe')" size="sm" variant="ghost" :loading="busy.has('probe')" @click="probe">Check again</VxButton>
-      </div>
+    <!-- A failed first load is the callout above (it knows a 404); a failed refresh keeps the page. -->
+    <VxLoadState v-else :error="error" :stale="!!data" :loading="!data" :error-text="errorText" :rows="8" @retry="reload">
+      <template v-if="data">
+        <div class="chips">
+          <VxChip k="sign"><ChatLine :lines="sign" :sign="sign" /></VxChip>
+          <VxChip v-for="c in statusChips" :key="c.k" :k="c.k" :tone="c.tone">{{ c.v }}</VxChip>
+        </div>
+        <div class="chips caps" :aria-label="`What the bot may do in #${login}`">
+          <span class="vx-muted small">Twitch permissions:</span>
+          <VxChip v-for="cap in data.channel.capabilities" :key="cap">{{ cap }}</VxChip>
+          <span v-if="!data.channel.capabilities.length" class="vx-muted small">none beyond chat</span>
+          <VxButton v-if="can('channel.probe')" size="sm" variant="ghost" :loading="busy.has('probe')" @click="probe">Check again</VxButton>
+        </div>
 
-      <VxCallout v-if="mayUpgrade" tone="info" :title="`#${login} is on the ${data.channel.tier} tier`">
-        Some commands and triggers need more of your channel (followers, redemptions, bits). Reconnect to grant the
-        bot the full tier; you see on Twitch exactly what it asks for.
-        <template #actions><VxButton :href="CONNECT_URL" size="sm" variant="primary">Upgrade to the full tier</VxButton></template>
-      </VxCallout>
+        <VxCallout v-if="mayUpgrade" tone="info" :title="`#${login} is on the ${data.channel.tier} tier`">
+          Some commands and triggers need more of your channel (followers, redemptions, bits). Reconnect to grant the
+          bot the full tier; you see on Twitch exactly what it asks for.
+          <template #actions><VxButton :href="CONNECT_URL" size="sm" variant="primary">Upgrade to the full tier</VxButton></template>
+        </VxCallout>
 
-      <VxCallout v-if="data.channel.banned" tone="error" title="The bot left because it was banned here">
-        Twitch refused one of its messages with 403. It stays out until someone brings it back on purpose. Unban it
-        first: if it's still banned, the next message it sends makes it leave again.
-        <template v-if="can('channel.join')" #actions><VxButton size="sm" :loading="busy.has('rejoin')" @click="rejoin">Rejoin #{{ login }}</VxButton></template>
-      </VxCallout>
+        <VxCallout v-if="data.channel.banned" tone="error" title="The bot left because it was banned here">
+          Twitch refused one of its messages with 403. It stays out until someone brings it back on purpose. Unban it
+          first: if it's still banned, the next message it sends makes it leave again.
+          <template v-if="can('channel.join')" #actions><VxButton size="sm" :loading="busy.has('rejoin')" @click="rejoin">Rejoin #{{ login }}</VxButton></template>
+        </VxCallout>
 
-      <VxTabs v-model="tab" :options="TABS" label="Channel sections" class="tabs" />
+        <VxTabs v-model="tab" :options="TABS" label="Channel sections" class="tabs" />
 
-      <template v-if="tab === 'settings'">
-        <ChannelSettings :channel="data.channel" :roles="data.roles" @saved="saved" />
-        <BackfillPanel :key="String(data.channel.history_backfill)" :login="login" />
+        <template v-if="tab === 'settings'">
+          <ChannelSettings :channel="data.channel" :roles="data.roles" @saved="saved" />
+          <BackfillPanel :key="String(data.channel.history_backfill)" :login="login" />
+        </template>
+        <ModulesTab v-else-if="tab === 'modules'" :login="login" :sign="sign" :modules="data.modules" :reload="reload" />
+        <RulesTab v-else-if="tab === 'rules'" :login="login" :sign="sign" :commands="data.commands" :reference="data.reference" :roles="data.roles" :reload="reload" />
+        <PublishedTab
+          v-else-if="tab === 'commands'"
+          :login="login"
+          :sign="sign"
+          :published="data.published"
+          :packs="data.packs"
+          :publish-role="data.channel.roles.publish_min"
+          :grant-role="data.channel.roles.grant_min"
+          :roles="data.allRoles"
+          :reload="reload"
+        />
+        <TriggersTab
+          v-else-if="tab === 'triggers'"
+          :login="login"
+          :sign="sign"
+          :triggers="data.triggers"
+          :capabilities="data.channel.capabilities"
+          :reload="reload"
+        />
+        <FilterTab v-else-if="tab === 'filter'" :login="login" :filters="data.filters" :global-filters="data.globalFilters" :reload="reload" />
+        <RepliesTab
+          v-else-if="tab === 'replies'"
+          :login="login"
+          :sign="sign"
+          :modules="data.modules.map((m) => m.name)"
+          :commands="data.commands.map((c) => c.name)"
+        />
+        <RolesTab v-else-if="tab === 'roles'" :login="login" :sign="sign" />
+        <VariablesTab v-else-if="tab === 'variables'" :login="login" :write-role="data.channel.roles.channel_var_write" :admin-role="data.channel.roles.var_admin" :roles="data.allRoles" />
+        <RunsTab v-else-if="tab === 'runs'" :login="login" :sign="sign" />
+        <ChatLogTab v-else-if="tab === 'log'" :login="login" :logging="data.channel.log_enabled" :public-log="data.channel.public_log" :channel-id="data.channel.channel_id" />
+        <section v-else-if="tab === 'audit'">
+          <p class="vx-muted intro">Every change made here, in chat, on this site or with an API key.</p>
+          <AuditBrowser :client="platform" :scope="data.channel.channel_id" action-hint="cc. or cc.edit" target-hint="exact, or a prefix:">
+          </AuditBrowser>
+        </section>
+        <IgnoredTab v-else-if="tab === 'ignored'" :login="login" :sign="sign" :ignored="data.ignored" :reload="reload" />
       </template>
-      <ModulesTab v-else-if="tab === 'modules'" :login="login" :sign="sign" :modules="data.modules" :reload="reload" />
-      <RulesTab v-else-if="tab === 'rules'" :login="login" :sign="sign" :commands="data.commands" :reference="data.reference" :roles="data.roles" :reload="reload" />
-      <PublishedTab
-        v-else-if="tab === 'commands'"
-        :login="login"
-        :sign="sign"
-        :published="data.published"
-        :packs="data.packs"
-        :publish-role="data.channel.roles.publish_min"
-        :grant-role="data.channel.roles.grant_min"
-        :roles="data.allRoles"
-        :reload="reload"
-      />
-      <TriggersTab
-        v-else-if="tab === 'triggers'"
-        :login="login"
-        :sign="sign"
-        :triggers="data.triggers"
-        :capabilities="data.channel.capabilities"
-        :reload="reload"
-      />
-      <FilterTab v-else-if="tab === 'filter'" :login="login" :filters="data.filters" :global-filters="data.globalFilters" :reload="reload" />
-      <RepliesTab
-        v-else-if="tab === 'replies'"
-        :login="login"
-        :sign="sign"
-        :modules="data.modules.map((m) => m.name)"
-        :commands="data.commands.map((c) => c.name)"
-      />
-      <RolesTab v-else-if="tab === 'roles'" :login="login" :sign="sign" />
-      <VariablesTab v-else-if="tab === 'variables'" :login="login" :write-role="data.channel.roles.channel_var_write" :admin-role="data.channel.roles.var_admin" :roles="data.allRoles" />
-      <RunsTab v-else-if="tab === 'runs'" :login="login" :sign="sign" />
-      <ChatLogTab v-else-if="tab === 'log'" :login="login" :logging="data.channel.log_enabled" :public-log="data.channel.public_log" :channel-id="data.channel.channel_id" />
-      <section v-else-if="tab === 'audit'">
-        <p class="vx-muted intro">Every change made here, in chat, on this site or with an API key.</p>
-        <AuditBrowser :client="platform" :scope="data.channel.channel_id" action-hint="cc. or cc.edit" target-hint="exact, or a prefix:">
-        </AuditBrowser>
-      </section>
-      <IgnoredTab v-else-if="tab === 'ignored'" :login="login" :sign="sign" :ignored="data.ignored" :reload="reload" />
-    </template>
+    </VxLoadState>
 
-    <VxDialog v-model:open="partOpen" :title="`Leave #${login}?`">
+    <VxConfirm
+      v-model:open="partOpen"
+      :title="`Leave #${login}?`"
+      confirm-label="Leave"
+      tone="danger"
+      :loading="busy.has('part')"
+      @confirm="part"
+    >
       The bot parts the channel and stops answering there. Its settings, commands and logs stay, and joining again
       brings everything back.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton variant="danger-solid" :loading="busy.has('part')" @click="part">Leave</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
   </ManageShell>
 </template>
 
 <style scoped>
-.loading { display: grid; gap: 6px; }
 .chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; }
 .chips :deep(code.dtb) { font-size: inherit; }
 .caps { margin-bottom: 16px; }

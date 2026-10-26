@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The bot's HTTP API, read from its own /openapi.json so it can't drift. Swagger UI (/docs, served by the bot) stays
 // linked for trying requests; this page is the one that matches the site.
-import { VxButton, VxCallout, VxSkeleton, VxToc } from '@vex/ui'
+import { VxLoadState, VxToc } from '@vex/ui'
 import { computed } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -49,69 +49,65 @@ const idOf = (key: string) => key.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g,
         <li>Errors are JSON with a <code>detail</code>; <code>422</code> means the body or parameters didn't validate.</li>
       </ul>
 
-      <VxCallout v-if="error" tone="error" title="Couldn't load the API description">
-        {{ errorText(error) }}
-        <template #actions><VxButton size="sm" @click="reload">Try again</VxButton></template>
-      </VxCallout>
-      <div v-else-if="!data" class="loading" aria-busy="true"><VxSkeleton v-for="i in 8" :key="i" h="38px" /></div>
-      <template v-else>
-        <nav class="tags" aria-label="Sections">
-          <a v-for="g in groups" :key="g.tag" :href="`#${g.tag}`">{{ g.tag }} <span class="vx-muted">{{ g.endpoints.length }}</span></a>
-        </nav>
+      <VxLoadState :error="error" :stale="!!data" :loading="!data" error-title="Couldn't load the API description" :error-text="errorText" :rows="8" @retry="reload">
+        <template v-if="data">
+          <nav class="tags" aria-label="Sections">
+            <a v-for="g in groups" :key="g.tag" :href="`#${g.tag}`">{{ g.tag }} <span class="vx-muted">{{ g.endpoints.length }}</span></a>
+          </nav>
 
-        <section v-for="g in groups" :key="g.tag">
-          <h2 :id="g.tag" class="vx-display">{{ g.tag }}</h2>
-          <p v-if="TAGS[g.tag]" class="vx-muted">{{ TAGS[g.tag] }}</p>
-          <details v-for="e in g.endpoints" :id="idOf(e.key)" :key="e.key" class="ep">
-            <summary>
-              <span class="method" :data-method="e.method">{{ e.method }}</span>
-              <code class="path">{{ e.path }}</code>
-              <span class="summary vx-muted">
-                <template v-for="(run, j) in codeRuns(e.summary)" :key="j">
-                  <code v-if="run.code">{{ run.text }}</code><template v-else>{{ run.text }}</template>
-                </template>
-              </span>
-            </summary>
-            <div class="body">
-              <!-- The first paragraph is the summary line above. -->
-              <p v-for="(para, i) in e.description.split(/\n\s*\n/).filter(Boolean).slice(1)" :key="i">
-                <template v-for="(run, j) in codeRuns(para.replace(/\s+/g, ' '))" :key="j">
-                  <code v-if="run.code">{{ run.text }}</code><template v-else>{{ run.text }}</template>
-                </template>
-              </p>
+          <section v-for="g in groups" :key="g.tag">
+            <h2 :id="g.tag" class="vx-display">{{ g.tag }}</h2>
+            <p v-if="TAGS[g.tag]" class="vx-muted">{{ TAGS[g.tag] }}</p>
+            <details v-for="e in g.endpoints" :id="idOf(e.key)" :key="e.key" class="ep">
+              <summary>
+                <span class="method" :data-method="e.method">{{ e.method }}</span>
+                <code class="path">{{ e.path }}</code>
+                <span class="summary vx-muted">
+                  <template v-for="(run, j) in codeRuns(e.summary)" :key="j">
+                    <code v-if="run.code">{{ run.text }}</code><template v-else>{{ run.text }}</template>
+                  </template>
+                </span>
+              </summary>
+              <div class="body">
+                <!-- The first paragraph is the summary line above. -->
+                <p v-for="(para, i) in e.description.split(/\n\s*\n/).filter(Boolean).slice(1)" :key="i">
+                  <template v-for="(run, j) in codeRuns(para.replace(/\s+/g, ' '))" :key="j">
+                    <code v-if="run.code">{{ run.text }}</code><template v-else>{{ run.text }}</template>
+                  </template>
+                </p>
 
-              <template v-for="block in [{ title: 'Parameters', fields: e.params }, { title: 'Body (JSON)', fields: e.body ?? [] }]" :key="block.title">
-                <template v-if="block.fields.length">
-                  <h3>{{ block.title }}</h3>
-                  <div class="table-scroll">
-                    <table class="vx-table">
-                      <tbody>
-                        <tr v-for="f in block.fields" :key="f.in + f.name">
-                          <td class="name"><code>{{ f.name }}</code><span v-if="f.required" class="req" title="required">*</span></td>
-                          <td class="type"><span v-if="f.in !== 'body'" class="vx-muted">{{ f.in }} · </span>{{ f.type }}</td>
-                          <td>{{ f.description }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                <template v-for="block in [{ title: 'Parameters', fields: e.params }, { title: 'Body (JSON)', fields: e.body ?? [] }]" :key="block.title">
+                  <template v-if="block.fields.length">
+                    <h3>{{ block.title }}</h3>
+                    <div class="table-scroll">
+                      <table class="vx-table">
+                        <tbody>
+                          <tr v-for="f in block.fields" :key="f.in + f.name">
+                            <td class="name"><code>{{ f.name }}</code><span v-if="f.required" class="req" title="required">*</span></td>
+                            <td class="type"><span v-if="f.in !== 'body'" class="vx-muted">{{ f.in }} · </span>{{ f.type }}</td>
+                            <td>{{ f.description }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </template>
                 </template>
-              </template>
 
-              <h3>Responses</h3>
-              <ul class="codes">
-                <li v-for="r in e.responses" :key="r.code"><code>{{ r.code }}</code> <span class="vx-muted">{{ r.description }}</span></li>
-              </ul>
-            </div>
-          </details>
-        </section>
-      </template>
+                <h3>Responses</h3>
+                <ul class="codes">
+                  <li v-for="r in e.responses" :key="r.code"><code>{{ r.code }}</code> <span class="vx-muted">{{ r.description }}</span></li>
+                </ul>
+              </div>
+            </details>
+          </section>
+        </template>
+      </VxLoadState>
     </article>
     </div>
   </DtpShell>
 </template>
 
 <style scoped>
-.loading { display: grid; gap: 6px; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 20px 0 0; font-family: var(--vx-font-mono); font-size: 13px; }
 .tags a { color: var(--vx-ink); }
 .api section h2 { font-family: var(--vx-font-mono); }

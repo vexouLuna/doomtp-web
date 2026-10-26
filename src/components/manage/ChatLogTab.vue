@@ -9,7 +9,7 @@
 // chatter's name opens their user card.
 import { loadBadges, loadChannelEmotes, pairRedemptions, removalNote, toChatLine, type ChatLine as Line, type EmoteSet, type LogEntry, type RawBadges } from '@vex/platform-web/chat'
 import { ChatLine, UserCard } from '@vex/platform-web/vue'
-import { VxButton, VxCallout, VxCheckbox, VxEmptyState, VxField, VxInput, VxSelect, VxSkeleton } from '@vex/ui'
+import { VxButton, VxCallout, VxCheckbox, VxDateInput, VxField, VxInput, VxLoadState, VxSelect } from '@vex/ui'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -225,10 +225,10 @@ const paging = computed(() => (asked.value.order === 'asc' ? { back: 'Earlier', 
       </div>
       <div class="vx-form-row">
         <VxField label="From" :error="rangeError ?? undefined">
-          <template #default="{ id }"><input :id="id" v-model="form.since" class="vx-input" type="datetime-local" /></template>
+          <template #default="{ id }"><VxDateInput :id="id" v-model="form.since" time /></template>
         </VxField>
         <VxField label="To" help="Empty: until now.">
-          <template #default="{ id }"><input :id="id" v-model="form.until" class="vx-input" type="datetime-local" :min="form.since || undefined" /></template>
+          <template #default="{ id }"><VxDateInput :id="id" v-model="form.until" time :min="form.since || undefined" /></template>
         </VxField>
         <VxField label="Order">
           <template #default="{ id }"><VxSelect :id="id" v-model="form.order" :options="ORDERS" width="150px" /></template>
@@ -248,54 +248,50 @@ const paging = computed(() => (asked.value.order === 'asc' ? { back: 'Earlier', 
     <VxCallout v-if="public && (status === 401 || status === 403)" tone="info" :title="`#${login}'s chat log isn't public`">
       Its log is off, or its broadcaster or moderators keep it to moderators.
     </VxCallout>
-    <VxCallout v-else-if="error" tone="error" title="Couldn't load the log">
-      {{ errorText(error) }}
-      <template #actions><VxButton size="sm" @click="reload">Try again</VxButton></template>
-    </VxCallout>
-    <div v-else-if="!data" class="loading" aria-busy="true"><VxSkeleton v-for="i in 8" :key="i" h="24px" /></div>
-    <VxEmptyState v-else-if="!data.items.length" title="Nothing found" :text="page ? 'No more lines this way.' : 'Nothing in the log matches.'" />
-    <template v-else>
-      <!-- These change only how the page shows, at once; the boxes above wait for Search. -->
-      <div class="view">
-        <VxSelect :model-value="form.removed" :options="REMOVED" width="170px" aria-label="Removed messages" @update:model-value="(v) => v && setRemoved(v)" />
-        <VxCheckbox v-if="!public" v-model="showMods" label="Show moderators" />
-        <VxCheckbox v-model="allRaw" label="Show raw" />
-      </div>
-      <div class="chat vx-panel" :class="{ 'all-raw': allRaw }" role="log" :aria-busy="loading">
-        <template v-for="l in lines" :key="l.line.id">
-          <div v-if="allRaw" class="line raw-line" :class="{ removed: l.line.removed }">
-            <time class="when" :datetime="l.at" :title="new Date(l.at).toLocaleString()">{{ stamp(l.at) }}</time>
-            <code>{{ rawText(l.raw, false) }}</code>
-          </div>
-          <template v-else>
-            <ChatLine
-              class="line"
-              :class="{ selected: selected === l.line.id, hidden: l.hidden, open: opened.has(l.line.id) }"
-              :line="l.line"
-              user-cards
-              :user-open="card?.line.id === l.line.id"
-              @user="toggleCard"
-              tabindex="0"
-              :title="l.hidden ? 'Click to see what it said' : undefined"
-              @click="select(l.line.id, !!l.line.removed, $event)"
-              @keydown.enter.self="select(l.line.id, !!l.line.removed, $event)"
-            >
-              <template #before><time class="when" :datetime="l.at" :title="new Date(l.at).toLocaleString()">{{ stamp(l.at) }}</time></template>
-              <template #after>
-                <!-- Text-sized, not a 26px control: it sits over the line's end and never moves the log. -->
-                <button type="button" class="raw-btn" :aria-label="opened.has(l.line.id) ? 'Hide raw' : 'Show raw'" :title="opened.has(l.line.id) ? 'Hide raw' : 'Show raw'" :aria-pressed="opened.has(l.line.id)" @click="toggleRaw(l.line.id)">{}</button>
-              </template>
-            </ChatLine>
-            <pre v-if="opened.has(l.line.id)" class="vx-code raw">{{ rawText(l.raw, true) }}</pre>
+    <VxLoadState v-else :error="error" :stale="!!data" :loading="!data" :empty="!data?.items.length" error-title="Couldn't load the log" :error-text="errorText" :rows="8" row-height="24px" empty-title="Nothing found" :empty-text="page ? 'No more lines this way.' : 'Nothing in the log matches.'" @retry="reload">
+      <template v-if="data">
+        <!-- These change only how the page shows, at once; the boxes above wait for Search. -->
+        <div class="view">
+          <VxSelect :model-value="form.removed" :options="REMOVED" width="170px" aria-label="Removed messages" @update:model-value="(v) => v && setRemoved(v)" />
+          <VxCheckbox v-if="!public" v-model="showMods" label="Show moderators" />
+          <VxCheckbox v-model="allRaw" label="Show raw" />
+        </div>
+        <div class="chat vx-panel" :class="{ 'all-raw': allRaw }" role="log" :aria-busy="loading">
+          <template v-for="l in lines" :key="l.line.id">
+            <div v-if="allRaw" class="line raw-line" :class="{ removed: l.line.removed }">
+              <time class="when" :datetime="l.at" :title="new Date(l.at).toLocaleString()">{{ stamp(l.at) }}</time>
+              <code>{{ rawText(l.raw, false) }}</code>
+            </div>
+            <template v-else>
+              <ChatLine
+                class="line"
+                :class="{ selected: selected === l.line.id, hidden: l.hidden, open: opened.has(l.line.id) }"
+                :line="l.line"
+                user-cards
+                :user-open="card?.line.id === l.line.id"
+                @user="toggleCard"
+                tabindex="0"
+                :title="l.hidden ? 'Click to see what it said' : undefined"
+                @click="select(l.line.id, !!l.line.removed, $event)"
+                @keydown.enter.self="select(l.line.id, !!l.line.removed, $event)"
+              >
+                <template #before><time class="when" :datetime="l.at" :title="new Date(l.at).toLocaleString()">{{ stamp(l.at) }}</time></template>
+                <template #after>
+                  <!-- Text-sized, not a 26px control: it sits over the line's end and never moves the log. -->
+                  <button type="button" class="raw-btn" :aria-label="opened.has(l.line.id) ? 'Hide raw' : 'Show raw'" :title="opened.has(l.line.id) ? 'Hide raw' : 'Show raw'" :aria-pressed="opened.has(l.line.id)" @click="toggleRaw(l.line.id)">{}</button>
+                </template>
+              </ChatLine>
+              <pre v-if="opened.has(l.line.id)" class="vx-code raw">{{ rawText(l.raw, true) }}</pre>
+            </template>
           </template>
-        </template>
-      </div>
-      <UserCard v-if="card" :line="card.line" :anchor="card.anchor" @close="card = null">
-        <template #actions="{ user, line }">
-          <VxButton v-if="user?.login ?? line.login" size="sm" @click="showUser((user?.login ?? line.login)!)">Their messages</VxButton>
-        </template>
-      </UserCard>
-    </template>
+        </div>
+        <UserCard v-if="card" :line="card.line" :anchor="card.anchor" @close="card = null">
+          <template #actions="{ user, line }">
+            <VxButton v-if="user?.login ?? line.login" size="sm" @click="showUser((user?.login ?? line.login)!)">Their messages</VxButton>
+          </template>
+        </UserCard>
+      </template>
+    </VxLoadState>
     <div v-if="data && (page > 0 || data.next_cursor)" class="pager">
       <VxButton size="sm" :disabled="page === 0 || loading" @click="newer">{{ paging.back }}</VxButton>
       <span class="vx-muted small">Page {{ page + 1 }}</span>

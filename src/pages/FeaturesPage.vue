@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { VxSkeleton, VxToc } from '@vex/ui'
+import { VxLoadState, VxToc } from '@vex/ui'
 import { computed } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import ChatLine from '@/components/ChatLine.vue'
@@ -98,15 +98,16 @@ function roleSource(name: string): string {
 
       <h2 id="permissions" class="vx-display">Roles and permissions</h2>
       <p>Roles are ranked. A command requires a role, and anyone whose rank reaches it may run the command.</p>
-      <div v-if="!roles" class="loading" aria-busy="true"><VxSkeleton v-for="i in 5" :key="i" h="26px" /></div>
-      <div v-else class="table-scroll">
-        <table class="vx-table">
-          <thead><tr><th>Role</th><th>Rank</th><th>Comes from</th></tr></thead>
-          <tbody>
-            <tr v-for="r in roles.roles" :key="r.name"><td><code>{{ r.name }}</code></td><td class="vx-tabular">{{ r.rank }}</td><td>{{ roleSource(r.name) }}</td></tr>
-          </tbody>
-        </table>
-      </div>
+      <VxLoadState :loading="!roles" :rows="5" row-height="26px">
+        <div v-if="roles" class="table-scroll">
+          <table class="vx-table">
+            <thead><tr><th>Role</th><th>Rank</th><th>Comes from</th></tr></thead>
+            <tbody>
+              <tr v-for="r in roles.roles" :key="r.name"><td><code>{{ r.name }}</code></td><td class="vx-tabular">{{ r.rank }}</td><td>{{ roleSource(r.name) }}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </VxLoadState>
       <p>
         Channels can add their own roles between {{ roles?.custom_rank_range[0] ?? 1 }} and {{ roles?.custom_rank_range[1] ?? 99 }}
         (<Cmd t="role create ambassador 40" />) and grant them with <Cmd t="role add ambassador @someone [duration]" />.
@@ -458,6 +459,5 @@ function roleSource(name: string): string {
 </template>
 
 <style scoped>
-.loading { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
 kbd { font-family: var(--vx-font-mono); font-size: 0.85em; padding: 0 4px; border: 1px solid var(--vx-line); border-radius: 4px; }
 </style>

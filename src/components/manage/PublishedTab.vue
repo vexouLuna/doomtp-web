@@ -3,7 +3,7 @@
 // enable|disable` does in chat, and one in a pack follows the pack (the Modules tab). Whoever reaches the channel's
 // "publish" role publishes their own commands and packs here, or a pack someone shared, and takes them down again;
 // whoever reaches its "grant" role lets published commands write the channel's variables.
-import { VxButton, VxCallout, VxCheckbox, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxSegmented, VxSelect, VxSwitch, useToast } from '@vex/ui'
+import { VxButton, VxCallout, VxCheckbox, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxSegmented, VxSelect, VxSwitch, VxTable, useToast, type TableColumn } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useResource } from '@vex/ui/utils'
@@ -113,6 +113,26 @@ async function setGrant(g: Grant, variable: string, on: boolean) {
   await act(`g:${g.name}:${variable}`, run, `${props.sign}${g.name} ${on ? 'may' : 'may no longer'} write channel.${variable}`)
 }
 const errText = errorText
+const ACTIONS: TableColumn = { key: 'actions', label: '', align: 'right', nowrap: true }
+const COLUMNS: TableColumn[] = [
+  { key: 'name', label: 'Command' },
+  { key: 'module', label: 'Module' },
+  { key: 'owner', label: 'By', muted: true },
+  { key: 'version', label: 'Version', mono: true, muted: true },
+  { key: 'status', label: 'State', nowrap: true },
+  ACTIONS,
+]
+const PACK_COLUMNS: TableColumn[] = [
+  { key: 'name', label: 'Pack', mono: true },
+  { key: 'commands', label: 'Commands', muted: true, class: 'small' },
+  { key: 'scope', label: 'Where' },
+  ACTIONS,
+]
+const GRANT_COLUMNS: TableColumn[] = [
+  { key: 'name', label: 'Command' },
+  { key: 'owner', label: 'By', muted: true },
+  { key: 'vars', label: 'May write' },
+]
 </script>
 
 <template>
@@ -132,46 +152,41 @@ const errText = errorText
         <ChatLine :lines="`${sign}cc disable <name>`" :sign="sign" /> in chat<template v-if="!mayPublish">, for
         {{ publishRole }} and up</template>; a pack's commands turn on and off with the pack, on the Modules tab.
       </p>
-      <div class="table-scroll vx-panel">
-        <table class="vx-table">
-          <thead><tr><th>Command</th><th>Module</th><th>By</th><th>Version</th><th>State</th><th></th></tr></thead>
-          <tbody>
-            <tr v-for="p in published" :key="`${p.module}/${p.name}`">
-              <td>
-                <ChatLine :lines="`${sign}${p.name}`" :sign="sign" />
-                <div v-if="p.summary" class="vx-muted small">{{ p.summary }}</div>
-              </td>
-              <td><RouterLink :to="{ query: { ...route.query, tab: 'modules' } }" class="vx-mono">{{ p.module }}</RouterLink></td>
-              <td class="vx-muted">@{{ p.owner }}</td>
-              <td class="vx-mono vx-muted">
-                v{{ p.version }}
-                <div v-if="p.changedSince !== null" class="small">changed since v{{ p.changedSince }}</div>
-              </td>
-              <td class="nowrap">
-                <VxSwitch
-                  v-if="toggleable(p)"
-                  :model-value="p.status === 'active'"
-                  :disabled="!mayPublish || busy.has(`p:${p.name}`)"
-                  :label="p.status === 'active' ? 'on' : 'off'"
-                  @update:model-value="(on: boolean) => toggle(p, on)"
-                />
-                <template v-else>
-                  <VxChip :tone="p.status === 'active' ? 'ok' : 'default'">{{ p.status }}</VxChip>
-                  <div v-if="p.status === 'orphaned'" class="vx-muted small">its owner deleted it</div>
-                </template>
-              </td>
-              <td class="end">
-                <VxButton
-                  v-if="mayPublish && hasUser && p.module === CUSTOM_MODULE"
-                  size="sm"
-                  variant="ghost"
-                  @click="unpublishing = { kind: 'command', name: p.name }"
-                >Unpublish</VxButton>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <VxTable class="vx-panel" :columns="COLUMNS" :rows="published" :row-key="(p) => `${p.module}/${p.name}`" label="Published commands">
+        <template #cell-name="{ row: p }">
+          <ChatLine :lines="`${sign}${p.name}`" :sign="sign" />
+          <div v-if="p.summary" class="vx-muted small">{{ p.summary }}</div>
+        </template>
+        <template #cell-module="{ row: p }">
+          <RouterLink :to="{ query: { ...route.query, tab: 'modules' } }" class="vx-mono">{{ p.module }}</RouterLink>
+        </template>
+        <template #cell-owner="{ row: p }">@{{ p.owner }}</template>
+        <template #cell-version="{ row: p }">
+          v{{ p.version }}
+          <div v-if="p.changedSince !== null" class="small">changed since v{{ p.changedSince }}</div>
+        </template>
+        <template #cell-status="{ row: p }">
+          <VxSwitch
+            v-if="toggleable(p)"
+            :model-value="p.status === 'active'"
+            :disabled="!mayPublish || busy.has(`p:${p.name}`)"
+            :label="p.status === 'active' ? 'on' : 'off'"
+            @update:model-value="(on: boolean) => toggle(p, on)"
+          />
+          <template v-else>
+            <VxChip :tone="p.status === 'active' ? 'ok' : 'default'">{{ p.status }}</VxChip>
+            <div v-if="p.status === 'orphaned'" class="vx-muted small">its owner deleted it</div>
+          </template>
+        </template>
+        <template #cell-actions="{ row: p }">
+          <VxButton
+            v-if="mayPublish && hasUser && p.module === CUSTOM_MODULE"
+            size="sm"
+            variant="ghost"
+            @click="unpublishing = { kind: 'command', name: p.name }"
+          >Unpublish</VxButton>
+        </template>
+      </VxTable>
     </template>
 
     <template v-if="mayPublish && mine.data.value?.notHere.length">
@@ -198,26 +213,21 @@ const errText = errorText
 
     <template v-if="packs.length">
       <h2 class="vx-eyebrow sub">Packs</h2>
-      <div class="table-scroll vx-panel">
-        <table class="vx-table">
-          <thead><tr><th>Pack</th><th>Commands</th><th>Where</th><th></th></tr></thead>
-          <tbody>
-            <tr v-for="p in packs" :key="`${p.scope}/${p.name}`">
-              <td class="vx-mono">{{ p.name }}<div v-if="p.summary" class="vx-muted small">{{ p.summary }}</div></td>
-              <td class="vx-muted small">{{ p.commands.map((c) => c.name).join(', ') }}</td>
-              <td><VxChip :tone="p.scope === 'global' ? 'default' : 'accent'">{{ p.scope === 'global' ? 'everywhere' : 'here' }}</VxChip></td>
-              <td class="end">
-                <VxButton
-                  v-if="mayPublish && hasUser && channelPacks.includes(p)"
-                  size="sm"
-                  variant="ghost"
-                  @click="unpublishing = { kind: 'pack', name: p.name, owner: packOwner(p) }"
-                >Unpublish</VxButton>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <VxTable class="vx-panel" :columns="PACK_COLUMNS" :rows="packs" :row-key="(p) => `${p.scope}/${p.name}`" label="Packs">
+        <template #cell-name="{ row: p }">{{ p.name }}<div v-if="p.summary" class="vx-muted small">{{ p.summary }}</div></template>
+        <template #cell-commands="{ row: p }">{{ p.commands.map((c) => c.name).join(', ') }}</template>
+        <template #cell-scope="{ row: p }">
+          <VxChip :tone="p.scope === 'global' ? 'default' : 'accent'">{{ p.scope === 'global' ? 'everywhere' : 'here' }}</VxChip>
+        </template>
+        <template #cell-actions="{ row: p }">
+          <VxButton
+            v-if="mayPublish && hasUser && channelPacks.includes(p)"
+            size="sm"
+            variant="ghost"
+            @click="unpublishing = { kind: 'pack', name: p.name, owner: packOwner(p) }"
+          >Unpublish</VxButton>
+        </template>
+      </VxTable>
     </template>
 
     <h2 class="vx-eyebrow sub">Variable grants</h2>
@@ -228,27 +238,22 @@ const errText = errorText
     </p>
     <VxCallout v-if="grants.error.value" tone="error" title="Couldn't load the grants">{{ errorText(grants.error.value) }}</VxCallout>
     <VxEmptyState v-else-if="grants.data.value && !grants.data.value.length" title="Nothing to grant" text="No command published here writes channel variables." />
-    <div v-else-if="grants.data.value" class="table-scroll vx-panel">
-      <table class="vx-table">
-        <thead><tr><th>Command</th><th>By</th><th>May write</th></tr></thead>
-        <tbody>
-          <tr v-for="g in grants.data.value" :key="g.id">
-            <td><ChatLine :lines="`${sign}${g.name}`" :sign="sign" /></td>
-            <td class="vx-muted">@{{ g.owner }}</td>
-            <td class="vars">
-              <VxCheckbox
-                v-for="v in [...new Set([...g.writes, ...g.granted])]"
-                :key="v"
-                :model-value="g.granted.includes(v)"
-                :disabled="!mayGrant || busy.has(`g:${g.name}:${v}`)"
-                :label="`channel.${v}`"
-                @update:model-value="(on: boolean) => setGrant(g, v, on)"
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <VxTable v-else-if="grants.data.value" class="vx-panel" :columns="GRANT_COLUMNS" :rows="grants.data.value" row-key="id" label="Variable grants">
+      <template #cell-name="{ row: g }"><ChatLine :lines="`${sign}${g.name}`" :sign="sign" /></template>
+      <template #cell-owner="{ row: g }">@{{ g.owner }}</template>
+      <template #cell-vars="{ row: g }">
+        <span class="vars">
+          <VxCheckbox
+            v-for="v in [...new Set([...g.writes, ...g.granted])]"
+            :key="v"
+            :model-value="g.granted.includes(v)"
+            :disabled="!mayGrant || busy.has(`g:${g.name}:${v}`)"
+            :label="`channel.${v}`"
+            @update:model-value="(on: boolean) => setGrant(g, v, on)"
+          />
+        </span>
+      </template>
+    </VxTable>
 
     <VxDialog v-model:open="pub.open" :title="`Publish in #${login}`" width="520px">
       <form id="pub-form" class="dialog-form" @submit.prevent="publish">
@@ -288,18 +293,18 @@ const errText = errorText
       </template>
     </VxDialog>
 
-    <VxDialog
+    <VxConfirm
       :open="unpublishing !== null"
       :title="unpublishing ? `Unpublish ${unpublishing.kind === 'command' ? sign : ''}${unpublishing.name}?` : ''"
       @update:open="(v: boolean) => { if (!v) unpublishing = null }"
+      confirm-label="Unpublish"
+      tone="danger"
+      :loading="busy.has('unpub')"
+      @confirm="unpublish"
     >
       Chat here can't run {{ unpublishing?.kind === 'pack' ? 'its commands' : 'it' }} any more. The command itself stays
       with its owner, who can publish it again.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton variant="danger-solid" :loading="busy.has('unpub')" @click="unpublish">Unpublish</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
   </section>
 </template>
 

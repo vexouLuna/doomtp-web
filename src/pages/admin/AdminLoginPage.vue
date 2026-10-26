@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ProblemError } from '@vex/platform-web'
+import { ProblemError, safeNext } from '@vex/platform-web'
 import { VxButton, VxCallout, VxField, VxInput, VxTwitchGlyph } from '@vex/ui'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -13,11 +13,8 @@ const field = ref<{ focus: () => void } | null>(null)
 const busy = ref(false)
 const error = ref<string | null>(null)
 
-const next = computed(() => {
-  const n = route.query.next
-  // Only paths on this site: never an absolute URL from the query.
-  return typeof n === 'string' && n.startsWith('/') && !n.startsWith('//') && !n.includes('\\') && !n.startsWith('/admin/login') ? n : '/manage'
-})
+// Only paths on this site: never an absolute URL from the query.
+const next = computed(() => safeNext(route.query.next, { home: '/manage', not: ['/admin/login'] }))
 
 /** A failed Twitch sign-in, as the bot's callback reports it. */
 const signinError = computed(() => {

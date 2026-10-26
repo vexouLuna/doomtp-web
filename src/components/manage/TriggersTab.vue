@@ -3,7 +3,7 @@
 // edited and deleted as `trigger` and `timer` do in chat; one runs at its creator's rank at most. A listener's
 // pattern can be tried on a line of chat first. Its cooldowns (ADR-0031) are one for the whole channel and one per
 // chatter, as `listen|event|timer cooldown` sets them; triggers with no chatter take only the first.
-import { VxButton, VxCheckbox, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxRadioGroup, VxSelect, VxStepper, VxSwitch, useToast } from '@vex/ui'
+import { VxButton, VxCheckbox, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxRadioGroup, VxSelect, VxStepper, VxSwitch, useToast } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import ChatLine from '@/components/ChatLine.vue'
 import { can, rankIn } from '@/lib/access'
@@ -295,17 +295,17 @@ const toast = useToast()
       </template>
     </VxDialog>
 
-    <VxDialog :open="deleting !== null" title="Delete this trigger?" @update:open="(v: boolean) => { if (!v) deleting = null }">
+    <VxConfirm
+      :open="deleting !== null"
+      title="Delete this trigger?"
+      @update:open="(v: boolean) => { if (!v) deleting = null }"
+      confirm-label="Delete"
+      tone="danger"
+      :loading="busy.has('t-del')"
+      @confirm="act('t-del', () => admin.deleteTrigger(login, deleting!), 'Trigger deleted').then(() => (deleting = null))"
+    >
       It stops firing at once. This can't be undone.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton
-          variant="danger-solid"
-          :loading="busy.has('t-del')"
-          @click="act('t-del', () => admin.deleteTrigger(login, deleting!), 'Trigger deleted').then(() => (deleting = null))"
-        >Delete</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
   </section>
 </template>
 

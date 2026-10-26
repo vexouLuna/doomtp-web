@@ -2,7 +2,7 @@
 // One of your packs' own triggers (ADR-0032), as `cc pack trigger` manages them in chat. They fire in every channel
 // where the pack is published and its module is on, at everyone's rank, and may call only the pack's public commands
 // and the built-ins. A pack's clock fires at most every 15 minutes, and a pack has at most 10 triggers.
-import { VxButton, VxCheckbox, VxChip, VxDialog, VxField, VxInput, VxRadioGroup, VxSelect, VxStepper, VxSwitch } from '@vex/ui'
+import { VxButton, VxCheckbox, VxChip, VxConfirm, VxDialog, VxField, VxInput, VxRadioGroup, VxSelect, VxStepper, VxSwitch } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import ChatLine from '@/components/ChatLine.vue'
 import { admin, NO_CHATTER, PACK_MIN_EVERY_S, TRIGGER_EVENTS, type MyPack, type PackTrigger, type PackTriggerBody } from '@/lib/admin'
@@ -200,17 +200,17 @@ const where = computed(() => (props.pack.published.length ? 'wherever the pack i
       </template>
     </VxDialog>
 
-    <VxDialog :open="deleting !== null" :title="`Delete ${pack.name} trigger ${deleting}?`" @update:open="(v: boolean) => { if (!v) deleting = null }">
+    <VxConfirm
+      :open="deleting !== null"
+      :title="`Delete ${pack.name} trigger ${deleting}?`"
+      @update:open="(v: boolean) => { if (!v) deleting = null }"
+      confirm-label="Delete"
+      tone="danger"
+      :loading="busy.has('pt-del')"
+      @confirm="act('pt-del', () => admin.deletePackTrigger(pack.name, deleting!), `${pack.name} trigger ${deleting} deleted`).then(() => (deleting = null))"
+    >
       It stops firing everywhere at once. This can't be undone.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton
-          variant="danger-solid"
-          :loading="busy.has('pt-del')"
-          @click="act('pt-del', () => admin.deletePackTrigger(pack.name, deleting!), `${pack.name} trigger ${deleting} deleted`).then(() => (deleting = null))"
-        >Delete</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
   </div>
 </template>
 

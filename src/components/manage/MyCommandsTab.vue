@@ -3,7 +3,7 @@
 // it, look back through its versions and revert, delete it; and your aliases for other people's commands.
 // A command is written "from" a channel, as `cc add` is typed in one: that channel's create role, filter and
 // command sign apply. Publishing one (or an alias) in a channel is `cc publish` typed there: its publish role applies.
-import { VxButton, VxCallout, VxCheckbox, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxSelect, VxSkeleton, VxSwitch, timeAgo, useToast } from '@vex/ui'
+import { VxButton, VxCheckbox, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxSelect, VxSwitch, VxTable, VxTextarea, timeAgo, useToast, type TableColumn } from '@vex/ui'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useResource } from '@vex/ui/utils'
@@ -172,79 +172,75 @@ async function saveLink() {
   const body = { command: clean(link.command), [link.from]: clean(link.where) }
   if (await act('link', () => admin.link(alias, body), `${alias} linked`)) link.open = false
 }
+const ACTIONS: TableColumn = { key: 'actions', label: '', align: 'right', nowrap: true }
+const COLUMNS: TableColumn[] = [
+  { key: 'name', label: 'Command', nowrap: true },
+  { key: 'body', label: 'Body', wrap: true, class: 'wrap body' },
+  { key: 'version', label: 'Version', mono: true, muted: true },
+  { key: 'where', label: 'Published', class: 'small' },
+  ACTIONS,
+]
+const LINK_COLUMNS: TableColumn[] = [
+  { key: 'alias', label: 'Your name', mono: true },
+  { key: 'name', label: 'Command', mono: true },
+  { key: 'owner', label: 'By', muted: true },
+  ACTIONS,
+]
 </script>
 
 <template>
   <section class="mtab">
-    <VxCallout v-if="error" tone="error" title="Couldn't load your commands">
-      {{ errorText(error) }}
-      <template #actions><VxButton size="sm" @click="reload">Try again</VxButton></template>
-    </VxCallout>
-    <div v-else-if="!data" class="loading" aria-busy="true"><VxSkeleton v-for="i in 4" :key="i" h="38px" /></div>
-    <template v-else>
-      <div class="head">
-        <p class="vx-muted intro">
-          The commands you wrote, the same as <ChatLine lines="!cc list" sign="!" /> in chat. They run wherever
-          they're published; share one and others can link it or publish it too.
-        </p>
-        <VxButton variant="primary" size="sm" @click="openNew()">New command</VxButton>
-      </div>
-      <VxEmptyState v-if="!data.commands.length" title="No commands yet" text="Write one here, or with !cc add in a channel the bot is in." />
-      <div v-else class="table-scroll vx-panel">
-        <table class="vx-table">
-          <thead><tr><th>Command</th><th>Body</th><th>Version</th><th>Published</th><th></th></tr></thead>
-          <tbody>
-            <tr v-for="c in data.commands" :key="c.id">
-              <td class="nowrap">
-                <span class="vx-mono">{{ c.name }}</span>
-                <VxChip v-if="c.shareable" tone="accent" class="chip">shared</VxChip>
-                <div v-if="c.summary" class="vx-muted small">{{ c.summary }}</div>
-              </td>
-              <td class="wrap body"><ChatLine :lines="c.body" sign="!" context="body" /></td>
-              <td class="vx-mono vx-muted">v{{ c.version }}</td>
-              <td class="small">
-                <div v-for="w in where(c)" :key="w">{{ w }}</div>
-                <span v-if="!where(c).length" class="vx-muted">nowhere yet: chat can't run it until it's published</span>
-                <div v-if="c.links" class="vx-muted">{{ c.links }} linked</div>
-              </td>
-              <td class="end">
-                <VxButton size="sm" variant="ghost" :disabled="!channels.length" @click="openPublish(c.name)">Publish</VxButton>
-                <RouterLink class="vx-btn is-sm is-ghost" :to="tryIt(c)">Try</RouterLink>
-                <VxButton size="sm" variant="ghost" @click="openEdit(c)">Edit</VxButton>
-                <VxButton size="sm" variant="ghost" @click="history = c.name">History</VxButton>
-                <VxButton size="sm" variant="ghost" @click="deleting = c">Delete</VxButton>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <VxLoadState :error="error" :stale="!!data" :loading="!data" error-title="Couldn't load your commands" :error-text="errorText" @retry="reload">
+      <template v-if="data">
+        <div class="head">
+          <p class="vx-muted intro">
+            The commands you wrote, the same as <ChatLine lines="!cc list" sign="!" /> in chat. They run wherever
+            they're published; share one and others can link it or publish it too.
+          </p>
+          <VxButton variant="primary" size="sm" @click="openNew()">New command</VxButton>
+        </div>
+        <VxEmptyState v-if="!data.commands.length" title="No commands yet" text="Write one here, or with !cc add in a channel the bot is in." />
+        <VxTable v-else class="vx-panel" :columns="COLUMNS" :rows="data.commands" row-key="id" label="Your commands">
+          <template #cell-name="{ row: c }">
+            <span class="vx-mono">{{ c.name }}</span>
+            <VxChip v-if="c.shareable" tone="accent" class="chip">shared</VxChip>
+            <div v-if="c.summary" class="vx-muted small">{{ c.summary }}</div>
+          </template>
+          <template #cell-body="{ row: c }"><ChatLine :lines="c.body" sign="!" context="body" /></template>
+          <template #cell-version="{ row: c }">v{{ c.version }}</template>
+          <template #cell-where="{ row: c }">
+            <div v-for="w in where(c)" :key="w">{{ w }}</div>
+            <span v-if="!where(c).length" class="vx-muted">nowhere yet: chat can't run it until it's published</span>
+            <div v-if="c.links" class="vx-muted">{{ c.links }} linked</div>
+          </template>
+          <template #cell-actions="{ row: c }">
+            <VxButton size="sm" variant="ghost" :disabled="!channels.length" @click="openPublish(c.name)">Publish</VxButton>
+            <RouterLink class="vx-btn is-sm is-ghost" :to="tryIt(c)">Try</RouterLink>
+            <VxButton size="sm" variant="ghost" @click="openEdit(c)">Edit</VxButton>
+            <VxButton size="sm" variant="ghost" @click="history = c.name">History</VxButton>
+            <VxButton size="sm" variant="ghost" @click="deleting = c">Delete</VxButton>
+          </template>
+        </VxTable>
 
-      <div class="head">
-        <h2 class="vx-eyebrow sub">Linked</h2>
-        <VxButton size="sm" @click="Object.assign(link, { open: true, alias: '', command: '', from: 'owner', where: '' })">Link a command</VxButton>
-      </div>
-      <p class="vx-muted intro">
-        Your own name for someone else's command, as <ChatLine lines="!cc link <alias> <owner> <command>" sign="!" />:
-        you can publish it under that name where you may publish.
-      </p>
-      <VxEmptyState v-if="!data.linked.length" title="No links" />
-      <div v-else class="table-scroll vx-panel">
-        <table class="vx-table">
-          <thead><tr><th>Your name</th><th>Command</th><th>By</th><th></th></tr></thead>
-          <tbody>
-            <tr v-for="l in data.linked" :key="l.alias">
-              <td class="vx-mono">{{ l.alias }}</td>
-              <td class="vx-mono">{{ l.name }}<div v-if="l.summary" class="vx-muted small">{{ l.summary }}</div></td>
-              <td class="vx-muted">@{{ l.owner }}</td>
-              <td class="end">
-                <VxButton size="sm" variant="ghost" :disabled="!channels.length" @click="openPublish(l.alias)">Publish</VxButton>
-                <VxButton size="sm" variant="ghost" :loading="busy.has(`ul:${l.alias}`)" @click="act(`ul:${l.alias}`, () => admin.unlink(l.alias), `${l.alias} unlinked`)">Unlink</VxButton>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </template>
+        <div class="head">
+          <h2 class="vx-eyebrow sub">Linked</h2>
+          <VxButton size="sm" @click="Object.assign(link, { open: true, alias: '', command: '', from: 'owner', where: '' })">Link a command</VxButton>
+        </div>
+        <p class="vx-muted intro">
+          Your own name for someone else's command, as <ChatLine lines="!cc link <alias> <owner> <command>" sign="!" />:
+          you can publish it under that name where you may publish.
+        </p>
+        <VxEmptyState v-if="!data.linked.length" title="No links" />
+        <VxTable v-else class="vx-panel" :columns="LINK_COLUMNS" :rows="data.linked" row-key="alias" label="Linked">
+          <template #cell-name="{ row: l }">{{ l.name }}<div v-if="l.summary" class="vx-muted small">{{ l.summary }}</div></template>
+          <template #cell-owner="{ row: l }">@{{ l.owner }}</template>
+          <template #cell-actions="{ row: l }">
+            <VxButton size="sm" variant="ghost" :disabled="!channels.length" @click="openPublish(l.alias)">Publish</VxButton>
+            <VxButton size="sm" variant="ghost" :loading="busy.has(`ul:${l.alias}`)" @click="act(`ul:${l.alias}`, () => admin.unlink(l.alias), `${l.alias} unlinked`)">Unlink</VxButton>
+          </template>
+        </VxTable>
+      </template>
+    </VxLoadState>
 
     <VxDialog v-model:open="draft.open" title="New command" width="600px">
       <form id="new-cmd" class="dialog-form" @submit.prevent="create">
@@ -255,7 +251,7 @@ async function saveLink() {
           <template #default="{ id }"><VxInput :id="id" v-model="draft.channel" mono placeholder="channel" /></template>
         </VxField>
         <VxField label="Body" help="An expression, as after !cc add <name>.">
-          <template #default="{ id }"><textarea :id="id" v-model="draft.body" class="body-input" spellcheck="false" placeholder="echo {$chatter.name} hugs {arg.1}"></textarea></template>
+          <template #default="{ id }"><VxTextarea :id="id" v-model="draft.body" mono spellcheck="false" placeholder="echo {$chatter.name} hugs {arg.1}" /></template>
         </VxField>
         <VxField label="Summary" help="Optional: one line for help and lists.">
           <template #default="{ id }"><VxInput :id="id" v-model="draft.summary" /></template>
@@ -271,7 +267,7 @@ async function saveLink() {
     <VxDialog v-model:open="edit.open" :title="`Edit ${edit.name}`" width="680px">
       <form id="edit-cmd" class="dialog-form" @submit.prevent="saveEdit">
         <VxField label="Body">
-          <template #default="{ id }"><textarea :id="id" v-model="edit.body" class="body-input" spellcheck="false"></textarea></template>
+          <template #default="{ id }"><VxTextarea :id="id" v-model="edit.body" mono spellcheck="false" /></template>
         </VxField>
         <VxField v-if="editPatch.body" label="Checked in" help="The channel whose word filter and sign the new body is checked against; empty: the bot-wide filter.">
           <template #default="{ id }"><VxInput :id="id" v-model="edit.channel" mono /></template>
@@ -322,36 +318,44 @@ async function saveLink() {
     </VxDialog>
 
     <VxDialog :open="history !== null" :title="`${history} · history`" width="680px" @update:open="(v: boolean) => { if (!v) history = null }">
-      <VxCallout v-if="versions.error.value" tone="error" title="Couldn't load its versions">{{ errorText(versions.error.value) }}</VxCallout>
-      <div v-else-if="!versions.data.value" class="loading"><VxSkeleton v-for="i in 3" :key="i" h="38px" /></div>
-      <table v-else class="vx-table">
-        <tbody>
-          <tr v-for="v in [...versions.data.value.versions].reverse()" :key="v.version">
-            <td class="vx-mono nowrap">v{{ v.version }}</td>
-            <td class="wrap"><ChatLine :lines="v.body" sign="!" context="body" /></td>
-            <td class="vx-muted small nowrap" :title="new Date(v.created_at).toLocaleString()">{{ timeAgo(v.created_at) }}</td>
-            <td class="end">
-              <VxChip v-if="v.version === versions.data.value.current" tone="ok">current</VxChip>
-              <VxButton v-else size="sm" variant="ghost" :loading="busy.has(`rev:${v.version}`)" @click="revert(v.version)">Revert to this</VxButton>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <VxLoadState
+        :error="versions.error.value"
+        :stale="!!versions.data.value"
+        :loading="!versions.data.value"
+        error-title="Couldn't load its versions"
+        :error-text="errorText"
+        :rows="3"
+        @retry="versions.reload"
+      >
+        <table v-if="versions.data.value" class="vx-table">
+          <tbody>
+            <tr v-for="v in [...versions.data.value.versions].reverse()" :key="v.version">
+              <td class="vx-mono nowrap">v{{ v.version }}</td>
+              <td class="wrap"><ChatLine :lines="v.body" sign="!" context="body" /></td>
+              <td class="vx-muted small nowrap" :title="new Date(v.created_at).toLocaleString()">{{ timeAgo(v.created_at) }}</td>
+              <td class="end">
+                <VxChip v-if="v.version === versions.data.value.current" tone="ok">current</VxChip>
+                <VxButton v-else size="sm" variant="ghost" :loading="busy.has(`rev:${v.version}`)" @click="revert(v.version)">Revert to this</VxButton>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </VxLoadState>
       <template #actions="{ close }"><VxButton @click="close">Close</VxButton></template>
     </VxDialog>
 
-    <VxDialog :open="deleting !== null" :title="`Delete ${deleting?.name}?`" @update:open="(v: boolean) => { if (!v) deleting = null }">
+    <VxConfirm
+      :open="deleting !== null"
+      :title="`Delete ${deleting?.name}?`"
+      @update:open="(v: boolean) => { if (!v) deleting = null }"
+      confirm-label="Delete"
+      tone="danger"
+      :loading="busy.has('del')"
+      @confirm="act('del', () => admin.deleteCommand(deleting!.name), `${deleting!.name} deleted`).then(() => (deleting = null))"
+    >
       It stops running everywhere it's published<template v-if="deleting?.links">, and the {{ deleting.links }} links to it stop working</template>.
       This can't be undone.
-      <template #actions="{ close }">
-        <VxButton @click="close">Cancel</VxButton>
-        <VxButton
-          variant="danger-solid"
-          :loading="busy.has('del')"
-          @click="act('del', () => admin.deleteCommand(deleting!.name), `${deleting!.name} deleted`).then(() => (deleting = null))"
-        >Delete</VxButton>
-      </template>
-    </VxDialog>
+    </VxConfirm>
 
     <VxDialog v-model:open="pub.open" :title="`Publish ${pub.command}`" width="520px">
       <form id="pub-cmd" class="dialog-form" @submit.prevent="publish">
@@ -397,7 +401,7 @@ async function saveLink() {
 .head .intro { flex: 1 1 24rem; }
 .head .sub { margin: 0; }
 .chip { margin-left: 6px; }
-.body { max-width: 26rem; }
+:deep(.body) { max-width: 26rem; }
 .params { margin-bottom: 10px; }
 .param-form .pos { width: 5rem; }
 .param-form .grow { flex: 1 1 14rem; }

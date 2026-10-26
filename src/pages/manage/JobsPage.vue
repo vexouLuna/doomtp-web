@@ -3,7 +3,7 @@
 // for its admins. Filters live in the URL. A backfill is queued from a channel's Chat log tab, not here: the bot
 // doesn't take new runs through /api/v2/jobs.
 import type { JobKindOut } from '@vex/platform-web'
-import { JobsBrowser, type JobFilters } from '@vex/platform-web/vue'
+import { JobsBrowser, jobFiltersFrom, jobFiltersQuery, type JobFilters } from '@vex/platform-web/vue'
 import { VxCallout } from '@vex/ui'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -14,15 +14,9 @@ import { platform } from '@/lib/platform'
 const route = useRoute()
 const router = useRouter()
 const allowed = computed(() => can('bot'))
-const q = (k: string) => (typeof route.query[k] === 'string' ? (route.query[k] as string) : '')
-
 const filters = computed<JobFilters>({
-  get: () => ({ state: q('state') || 'all', kind: q('kind'), subject: q('subject') }),
-  set: (f) => {
-    const query: Record<string, string> = {}
-    for (const [k, v] of Object.entries(f)) if (v && !(k === 'state' && v === 'all')) query[k] = v
-    router.replace({ query })
-  },
+  get: () => jobFiltersFrom(route.query),
+  set: (f) => router.replace({ query: jobFiltersQuery(f) }),
 })
 
 const kinds = ref<JobKindOut[] | null>(null)

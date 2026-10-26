@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { VxButton, VxCallout, VxSkeleton } from '@vex/ui'
+import { VxLoadState } from '@vex/ui'
 import { computed } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -28,16 +28,12 @@ const { data: rows, error, reload } = useResource(async () => {
         sign that channel uses. Click a command for its arguments, cooldowns and examples.
       </p>
     </div>
-    <VxCallout v-if="error" tone="error" title="Couldn't load the commands">
-      {{ errorText(error) }}
-      <template #actions><VxButton size="sm" @click="reload">Try again</VxButton></template>
-    </VxCallout>
-    <div v-else-if="!rows" class="loading" aria-busy="true"><VxSkeleton v-for="i in 8" :key="i" h="38px" /></div>
-    <CommandTable v-else :rows="rows" :sign="sign" />
+    <VxLoadState :error="error" :stale="!!rows" :loading="!rows" error-title="Couldn't load the commands" :error-text="errorText" :rows="8" @retry="reload">
+      <CommandTable v-if="rows" :rows="rows" :sign="sign" />
+    </VxLoadState>
   </DtpShell>
 </template>
 
 <style scoped>
 .doc { margin-bottom: 18px; }
-.loading { display: flex; flex-direction: column; gap: 6px; }
 </style>
