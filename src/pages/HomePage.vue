@@ -76,11 +76,9 @@ const START = [
         <div class="chan-top">
           <b class="chan-name" :title="`#${ch.login}`">#{{ ch.login }}</b>
           <VxChip :tone="ch.tier === 'full' ? 'ok' : 'default'">{{ ch.tier }}</VxChip>
+          <VxChip v-if="ch.read_only" tone="warn" title="Bot speaks: off. It keeps logging but never sends a message here" class="ro"><span class="ell">Bot speaks: off</span></VxChip>
         </div>
-        <div class="chan-meta vx-muted small vx-mono">
-          <span>sign <code>{{ ch.prefix }}</code></span>
-          <VxChip v-if="ch.read_only" tone="warn" title="It keeps logging but never sends a message here">Bot speaks: off</VxChip>
-        </div>
+        <div class="vx-muted small vx-mono">sign <code>{{ ch.prefix }}</code></div>
       </RouterLink>
     </div>
   </DtpShell>
@@ -98,12 +96,14 @@ const START = [
 .card { padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; color: inherit; min-width: 0; }
 .card:hover { border-color: var(--vx-accent); color: inherit; }
 .card b { color: var(--vx-ink); }
-/* Two lines on every card, neither wraps: the name ellipsizes beside its tier chip, and the read-only chip sits by
-   the sign with room kept for it (a VxChip's height), so no width, name or font scale changes a card's height. */
-.chan-top, .chan-meta { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.chan-name { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The top line never wraps: the name ellipsizes to make room for the chips, so no width, name or font scale changes
+   a card's height. With two chips on a narrow card the name keeps a few letters and the read-only chip's label
+   ellipsizes instead (its title has it in full); past that, the line clips rather than spill out of the card. */
+.chan-top { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; }
+.chan-name { flex: 1 1 0; min-width: 5ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chan-top .vx-chip { flex: none; }
-.chan-meta { justify-content: space-between; min-height: calc(11px * 1.7 + 2px); }
+.chan-top .vx-chip.ro { flex: 0 1 auto; min-width: 0; }
+.ell { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .small { font-size: 12px; }
 code { font-family: var(--vx-font-mono); }
 @container vx-site (max-width: 700px) {
