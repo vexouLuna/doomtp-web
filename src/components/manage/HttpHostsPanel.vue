@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The hosts `http get` may fetch (ADR-0020), the same as `admin http` in chat: allow and remove them, attach a
 // secret the bot adds to each request (its value goes in and never comes back), and the rate limits.
-import { VxButton, VxCheckbox, VxChip, VxConfirm, VxDialog, VxField, VxInput, VxLoadState, VxRadioGroup, timeAgo } from '@vex/ui'
+import { VxButton, VxCheckbox, VxChip, VxConfirm, VxDialog, VxField, VxInput, VxLoadState, VxRadioGroup, VxTable, timeAgo, type TableColumn } from '@vex/ui'
 import { computed, reactive, ref, watch } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -11,6 +11,14 @@ import { useAct } from '@/lib/useAct'
 
 const { data, error, reload } = useResource(() => admin.httpHosts())
 const { busy, act } = useAct(reload)
+
+const COLUMNS: TableColumn[] = [
+  { key: 'pattern', label: 'Host', mono: true, wrap: true, class: 'wrap' },
+  { key: 'plain_http', label: 'Scheme' },
+  { key: 'secret', label: 'Secret' },
+  { key: 'added_at', label: 'Added', muted: true, nowrap: true },
+  { key: 'actions', label: '', align: 'right', nowrap: true },
+]
 
 // ── allow a host ──
 const adding = reactive({ pattern: '', plainHttp: false })
@@ -67,30 +75,22 @@ const saveLimits = () => act('limits', () => admin.setHttpLimits(limitsPatch.val
   <div class="mtab">
     <VxLoadState :error="error" :stale="!!data" :loading="!data" error-title="Couldn't load the HTTP hosts" :error-text="errorText" :rows="3" @retry="reload">
       <template v-if="data">
-        <div class="table-scroll vx-panel">
-          <table class="vx-table">
-            <thead><tr><th>Host</th><th>Scheme</th><th>Secret</th><th>Added</th><th></th></tr></thead>
-            <tbody>
-              <tr v-for="h in data.hosts" :key="h.pattern">
-                <td class="vx-mono wrap">{{ h.pattern }}</td>
-                <td><VxChip :tone="h.plain_http ? 'warn' : 'default'">{{ h.plain_http ? 'http too' : 'https' }}</VxChip></td>
-                <td>
-                  <span v-if="h.secret" class="vx-mono">{{ h.secret.kind }} {{ h.secret.name }}</span>
-                  <span v-else class="vx-muted">none</span>
-                </td>
-                <td class="vx-muted nowrap" :title="h.added_at ? new Date(h.added_at).toLocaleString() : undefined">
-                  {{ timeAgo(h.added_at) }}<template v-if="h.added_by"> · {{ h.added_by }}</template>
-                </td>
-                <td class="end">
-                  <VxButton size="sm" variant="ghost" @click="editSecret(h)">{{ h.secret ? 'Replace secret' : 'Add secret' }}</VxButton>
-                  <VxButton v-if="h.secret" size="sm" variant="ghost" :loading="busy.has(`clear:${h.pattern}`)" @click="clearSecret(h)">Remove secret</VxButton>
-                  <VxButton size="sm" variant="danger" @click="removing = h">Remove</VxButton>
-                </td>
-              </tr>
-              <tr v-if="!data.hosts.length"><td colspan="5" class="vx-muted">No hosts yet: <code>http get</code> can't fetch anything.</td></tr>
-            </tbody>
-          </table>
-        </div>
+        <VxTable class="vx-panel" :columns="COLUMNS" :rows="data.hosts" row-key="pattern" label="HTTP hosts">
+          <template #cell-plain_http="{ row }"><VxChip :tone="row.plain_http ? 'warn' : 'default'">{{ row.plain_http ? 'http too' : 'https' }}</VxChip></template>
+          <template #cell-secret="{ row }">
+            <span v-if="row.secret" class="vx-mono">{{ row.secret.kind }} {{ row.secret.name }}</span>
+            <span v-else class="vx-muted">none</span>
+          </template>
+          <template #cell-added_at="{ row }">
+            <span :title="row.added_at ? new Date(row.added_at).toLocaleString() : undefined">{{ timeAgo(row.added_at) }}<template v-if="row.added_by"> Â· {{ row.added_by }}</template></span>
+          </template>
+          <template #cell-actions="{ row }">
+            <VxButton size="sm" variant="ghost" @click="editSecret(row)">{{ row.secret ? 'Replace secret' : 'Add secret' }}</VxButton>
+            <VxButton v-if="row.secret" size="sm" variant="ghost" :loading="busy.has(`clear:${row.pattern}`)" @click="clearSecret(row)">Remove secret</VxButton>
+            <VxButton size="sm" variant="danger" @click="removing = row">Remove</VxButton>
+          </template>
+          <template #empty>No hosts yet: <code>http get</code> can't fetch anything.</template>
+        </VxTable>
         <form class="add vx-form-row vx-panel" @submit.prevent="allow">
           <VxField label="Host" class="grow" help="A name like api.example.com, or *.example.com for its subdomains.">
             <template #default="{ id }"><VxInput :id="id" v-model="adding.pattern" mono placeholder="api.example.com" /></template>

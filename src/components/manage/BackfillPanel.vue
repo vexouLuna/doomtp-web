@@ -2,7 +2,7 @@
 // History backfill jobs for a channel: the queue and the latest finished ones. The broadcaster queues a pass over
 // every gap in the log (as `backfill` does in chat), or any range they pick (from before the bot was listening,
 // say), and cancels a job that hasn't started. Each is a `chat_backfill` job run: an admin follows it to its job page.
-import { VxButton, VxCallout, VxChip, VxDateInput, VxEmptyState, VxField, timeAgo } from '@vex/ui'
+import { VxButton, VxCallout, VxChip, VxDateInput, VxEmptyState, VxField, VxTable, timeAgo, type TableColumn } from '@vex/ui'
 import { computed, reactive, ref, watch } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -70,6 +70,13 @@ async function queueRange() {
 
 const result = (j: BackfillJob) =>
   j.error ?? (j.state === 'done' ? `${j.inserted} new of ${j.fetched} fetched${j.complete === false ? ', partial' : ''}` : '')
+const COLUMNS: TableColumn[] = [
+  { key: 'range', label: 'Range', nowrap: true },
+  { key: 'state', label: 'State', nowrap: true },
+  { key: 'requested_at', label: 'Asked', muted: true, nowrap: true },
+  { key: 'result', label: 'Result', wrap: true, class: 'wrap' },
+  { key: 'actions', label: '', align: 'right', nowrap: true },
+]
 </script>
 
 <template>
@@ -119,31 +126,26 @@ const result = (j: BackfillJob) =>
     </form>
     <VxCallout v-if="error" tone="error" title="Couldn't load the backfill jobs">{{ errorText(error) }}</VxCallout>
     <VxEmptyState v-else-if="data && !data.jobs.length" title="No backfill jobs yet" />
-    <div v-else-if="data" class="table-scroll">
-      <table class="vx-table">
-        <thead><tr><th>Range</th><th>State</th><th>Asked</th><th>Result</th><th></th></tr></thead>
-        <tbody>
-          <tr v-for="j in data.jobs" :key="j.id">
-            <td class="nowrap small">{{ dateTime(j.from_ms) }} → {{ dateTime(j.to_ms) }}</td>
-            <td class="nowrap">
-              <VxChip :tone="TONE[j.state] ?? 'default'">{{ j.state }}</VxChip>
-              <RouterLink v-if="isAdmin()" class="job small" :to="`/manage/jobs/${j.id}`">job {{ j.id }}</RouterLink>
-            </td>
-            <td class="vx-muted small nowrap" :title="new Date(j.requested_at).toLocaleString()">{{ timeAgo(j.requested_at) }} · {{ j.requested_by }}</td>
-            <td class="small wrap" :class="{ bad: j.error }">{{ result(j) }}</td>
-            <td class="end">
-              <VxButton
-                v-if="mayRun && j.state === 'queued'"
-                size="sm"
-                variant="ghost"
-                :loading="busy.has(`c:${j.id}`)"
-                @click="act(`c:${j.id}`, () => admin.cancelBackfill(login, j.id), 'Backfill job cancelled')"
-              >Cancel</VxButton>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <VxTable v-else-if="data" :columns="COLUMNS" :rows="data.jobs" row-key="id" label="Backfill jobs">
+      <template #cell-range="{ row: j }"><span class="small">{{ dateTime(j.from_ms) }} → {{ dateTime(j.to_ms) }}</span></template>
+      <template #cell-state="{ row: j }">
+        <VxChip :tone="TONE[j.state] ?? 'default'">{{ j.state }}</VxChip>
+        <RouterLink v-if="isAdmin()" class="job small" :to="`/manage/jobs/${j.id}`">job {{ j.id }}</RouterLink>
+      </template>
+      <template #cell-requested_at="{ row: j }">
+        <span class="small" :title="new Date(j.requested_at).toLocaleString()">{{ timeAgo(j.requested_at) }} · {{ j.requested_by }}</span>
+      </template>
+      <template #cell-result="{ row: j }"><span class="small" :class="{ bad: j.error }">{{ result(j) }}</span></template>
+      <template #cell-actions="{ row: j }">
+        <VxButton
+          v-if="mayRun && j.state === 'queued'"
+          size="sm"
+          variant="ghost"
+          :loading="busy.has(`c:${j.id}`)"
+          @click="act(`c:${j.id}`, () => admin.cancelBackfill(login, j.id), 'Backfill job cancelled')"
+        >Cancel</VxButton>
+      </template>
+    </VxTable>
   </section>
 </template>
 
@@ -155,7 +157,6 @@ const result = (j: BackfillJob) =>
 .presets { display: flex; flex-wrap: wrap; gap: 6px; }
 .presets .vx-chip { cursor: pointer; }
 .small { font-size: 12px; margin: 0; }
-.nowrap { white-space: nowrap; }
 .bad { color: var(--vx-bad); }
 .job { margin-left: 6px; color: inherit; }
 </style>

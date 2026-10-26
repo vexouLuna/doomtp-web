@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Variable storage limits (ADR-0019), the same as `admin quota|valuecap|listitems|names` in chat: the defaults for
 // every owner, and overrides for one channel, publisher or chatter.
-import { VxButton, VxField, VxInput, VxLoadState, VxSelect } from '@vex/ui'
+import { VxButton, VxField, VxInput, VxLoadState, VxSelect, VxTable, type TableColumn } from '@vex/ui'
 import { computed, reactive, watch } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { bytes, errorText } from '@vex/platform-web'
@@ -15,6 +15,11 @@ const FIELDS: { key: keyof Limits; label: string; size: boolean }[] = [
   { key: 'value_cap_bytes', label: 'Largest value (bytes)', size: true },
   { key: 'list_items', label: 'Items a list', size: false },
   { key: 'names_per_space', label: 'Names a namespace', size: false },
+]
+const COLUMNS: TableColumn[] = [
+  { key: 'owner', label: 'Owner', nowrap: true },
+  ...FIELDS.map((f) => ({ key: f.key, label: f.label.replace(/ \(bytes\)$/, '') })),
+  { key: 'actions', label: '', align: 'right', nowrap: true },
 ]
 const show = (f: (typeof FIELDS)[number], v: number | null | undefined) => (v === null || v === undefined ? 'default' : f.size ? bytes(v) : String(v))
 
@@ -79,19 +84,13 @@ async function saveOwner() {
         </form>
 
         <h3 class="vx-eyebrow sub">Overrides</h3>
-        <div class="table-scroll vx-panel">
-          <table class="vx-table">
-            <thead><tr><th>Owner</th><th v-for="f in FIELDS" :key="f.key">{{ f.label.replace(/ \(bytes\)$/, '') }}</th><th></th></tr></thead>
-            <tbody>
-              <tr v-for="o in data.overrides" :key="`${o.owner_kind}/${o.owner_id}`">
-                <td class="nowrap"><span class="vx-muted">{{ o.owner_kind }}</span> <UserRef :id="o.owner_id" :login="o.owner_login" /></td>
-                <td v-for="f in FIELDS" :key="f.key" :class="{ 'vx-muted': o[f.key] === null || o[f.key] === undefined }">{{ show(f, o[f.key]) }}</td>
-                <td class="end"><VxButton v-if="o.owner_login" size="sm" @click="editOwner(o)">Edit</VxButton></td>
-              </tr>
-              <tr v-if="!data.overrides.length"><td :colspan="FIELDS.length + 2" class="vx-muted">Every owner has the defaults.</td></tr>
-            </tbody>
-          </table>
-        </div>
+        <VxTable class="vx-panel" :columns="COLUMNS" :rows="data.overrides" :row-key="(o) => `${o.owner_kind}/${o.owner_id}`" label="Limit overrides" empty="Every owner has the defaults.">
+          <template #cell-owner="{ row }"><span class="vx-muted">{{ row.owner_kind }}</span> <UserRef :id="row.owner_id" :login="row.owner_login" /></template>
+          <template v-for="f in FIELDS" :key="f.key" #[`cell-${f.key}`]="{ row }">
+            <span :class="{ 'vx-muted': row[f.key] === null || row[f.key] === undefined }">{{ show(f, row[f.key]) }}</span>
+          </template>
+          <template #cell-actions="{ row }"><VxButton v-if="row.owner_login" size="sm" @click="editOwner(row)">Edit</VxButton></template>
+        </VxTable>
         <form class="add vx-form-row vx-panel" @submit.prevent="saveOwner">
           <VxField label="Owner kind"><template #default><VxSelect v-model="owner.kind" :options="KIND_OPTIONS" width="140px" /></template></VxField>
           <VxField label="Twitch login">

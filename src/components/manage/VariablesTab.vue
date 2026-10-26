@@ -4,7 +4,7 @@
 // keep here (`publisher.channel.*`, `publisher.channel.chatter.*`), with how much storage they use. Whoever reaches
 // the channel's "write channel variables" role sets and deletes `channel.*`; a chatter's value is cleared by them or
 // by the "manage variables" role, as `!var del … @user` does. Nobody edits someone else's.
-import { VxButton, VxCallout, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxProgress, VxSelect, timeAgo } from '@vex/ui'
+import { VxButton, VxCallout, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxProgress, VxSelect, VxTable, timeAgo, type TableColumn } from '@vex/ui'
 import { computed, reactive, ref, watch } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { bytes, errorText } from '@vex/platform-web'
@@ -83,6 +83,24 @@ const applied = ref({ ...filter })
 const other = reactive<{ rows: NamespacedVariable[]; more: boolean; loading: boolean; error: unknown }>({ rows: [], more: false, loading: false, error: null })
 const perChatter = computed(() => view.value === 'channel.chatter' || view.value === 'publisher.channel.chatter')
 const byCommand = computed(() => view.value.startsWith('publisher'))
+const NAME: TableColumn = { key: 'name', label: 'Name', mono: true, nowrap: true }
+const VALUE: TableColumn = { key: 'value', label: 'Value', mono: true, wrap: true, class: 'wrap value' }
+const CHANGED: TableColumn = { key: 'updated_at', label: 'Changed', muted: true, nowrap: true }
+const ACTIONS: TableColumn = { key: 'actions', label: '', align: 'right', nowrap: true }
+const CHANNEL_COLUMNS = [NAME, VALUE, CHANGED, { key: 'updated_by', label: 'By', muted: true, mono: true }, ACTIONS]
+const TOP_COLUMNS: TableColumn[] = [
+  { key: 'rank', label: '#', muted: true },
+  { key: 'chatter_id', label: 'Chatter', mono: true },
+  { key: 'value', label: 'Value', mono: true },
+]
+const otherColumns = computed(() => [
+  NAME,
+  ...(byCommand.value ? [{ key: 'publisher_id', label: 'Owner', mono: true }] : []),
+  ...(perChatter.value ? [{ key: 'chatter_id', label: 'Chatter', mono: true }] : []),
+  VALUE,
+  CHANGED,
+  ACTIONS,
+])
 const bare = (s: string) => s.trim().replace(/^@/, '').toLowerCase()
 
 async function loadOther(more = false) {
@@ -185,26 +203,21 @@ async function loadTop() {
           />
           <template v-else>
             <VxInput v-model="query" class="search" placeholder="Find a variable or value" aria-label="Find a variable" />
-            <div class="table-scroll vx-panel">
-              <table class="vx-table">
-                <thead><tr><th>Name</th><th>Value</th><th>Changed</th><th>By</th><th></th></tr></thead>
-                <tbody>
-                  <tr v-for="v in rows" :key="v.name">
-                    <td class="vx-mono nowrap">channel.{{ v.name }}</td>
-                    <td class="vx-mono wrap value">{{ shown(v.value) }}</td>
-                    <td class="vx-muted nowrap" :title="v.updated_at ? new Date(v.updated_at).toLocaleString() : undefined">{{ timeAgo(v.updated_at) }}</td>
-                    <td class="vx-muted vx-mono"><UserRef :id="v.updated_by" :login="v.updated_by_login" /></td>
-                    <td class="end">
-                      <template v-if="mayWrite">
-                        <VxButton size="sm" variant="ghost" @click="openSet(v)">Edit</VxButton>
-                        <VxButton size="sm" variant="ghost" @click="deleting = v.name">Delete</VxButton>
-                      </template>
-                    </td>
-                  </tr>
-                  <tr v-if="!rows.length"><td colspan="5" class="vx-muted">No variable matches “{{ query }}”.</td></tr>
-                </tbody>
-              </table>
-            </div>
+            <VxTable class="vx-panel" :columns="CHANNEL_COLUMNS" :rows="rows" row-key="name" label="Channel variables">
+              <template #cell-name="{ row: v }">channel.{{ v.name }}</template>
+              <template #cell-value="{ row: v }">{{ shown(v.value) }}</template>
+              <template #cell-updated_at="{ row: v }">
+                <span :title="v.updated_at ? new Date(v.updated_at).toLocaleString() : undefined">{{ timeAgo(v.updated_at) }}</span>
+              </template>
+              <template #cell-updated_by="{ row: v }"><UserRef :id="v.updated_by" :login="v.updated_by_login" /></template>
+              <template #cell-actions="{ row: v }">
+                <template v-if="mayWrite">
+                  <VxButton size="sm" variant="ghost" @click="openSet(v)">Edit</VxButton>
+                  <VxButton size="sm" variant="ghost" @click="deleting = v.name">Delete</VxButton>
+                </template>
+              </template>
+              <template #empty>No variable matches “{{ query }}”.</template>
+            </VxTable>
           </template>
         </template>
 
@@ -217,18 +230,10 @@ async function loadTop() {
           <VxCallout v-if="top.error" tone="error" title="Couldn't load the leaderboard">{{ errorText(top.error) }}</VxCallout>
           <p v-else-if="top.rows === null" class="vx-muted small">Name a channel.chatter variable that holds numbers.</p>
           <VxEmptyState v-else-if="!top.rows.length" title="Nobody has a number there yet" />
-          <div v-else class="table-scroll vx-panel">
-            <table class="vx-table">
-              <thead><tr><th>#</th><th>Chatter</th><th>Value</th></tr></thead>
-              <tbody>
-                <tr v-for="r in top.rows" :key="r.chatter_id">
-                  <td class="vx-muted">{{ r.rank }}</td>
-                  <td class="vx-mono"><UserRef :id="r.chatter_id" :login="r.chatter_login" /></td>
-                  <td class="vx-mono">{{ shown(r.value) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <VxTable v-else class="vx-panel" :columns="TOP_COLUMNS" :rows="top.rows" row-key="chatter_id" label="Leaderboard">
+            <template #cell-chatter_id="{ row: r }"><UserRef :id="r.chatter_id" :login="r.chatter_login" /></template>
+            <template #cell-value="{ row: r }">{{ shown(r.value) }}</template>
+          </VxTable>
         </template>
 
         <template v-else>
@@ -250,30 +255,16 @@ async function loadTop() {
             empty-text="Commands save these as chatters use them."
             @retry="loadOther()"
           >
-            <div class="table-scroll vx-panel">
-              <table class="vx-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th v-if="byCommand">Owner</th>
-                    <th v-if="perChatter">Chatter</th>
-                    <th>Value</th>
-                    <th>Changed</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(v, i) in other.rows" :key="`${v.publisher_id}:${v.chatter_id}:${v.name}:${i}`">
-                    <td class="vx-mono nowrap">{{ prefix(view) }}{{ v.name }}</td>
-                    <td v-if="byCommand" class="vx-mono"><UserRef :id="v.publisher_id" :login="v.publisher_login" /></td>
-                    <td v-if="perChatter" class="vx-mono"><UserRef :id="v.chatter_id" :login="v.chatter_login" /></td>
-                    <td class="vx-mono wrap value">{{ shown(v.value) }}</td>
-                    <td class="vx-muted nowrap" :title="v.updated_at ? new Date(v.updated_at).toLocaleString() : undefined">{{ timeAgo(v.updated_at) }}</td>
-                    <td class="end"><VxButton v-if="mayClear(v)" size="sm" variant="ghost" @click="clearing = v">Clear</VxButton></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <VxTable class="vx-panel" :columns="otherColumns" :rows="other.rows" label="Variables">
+              <template #cell-name="{ row: v }">{{ prefix(view) }}{{ v.name }}</template>
+              <template #cell-publisher_id="{ row: v }"><UserRef :id="v.publisher_id" :login="v.publisher_login" /></template>
+              <template #cell-chatter_id="{ row: v }"><UserRef :id="v.chatter_id" :login="v.chatter_login" /></template>
+              <template #cell-value="{ row: v }">{{ shown(v.value) }}</template>
+              <template #cell-updated_at="{ row: v }">
+                <span :title="v.updated_at ? new Date(v.updated_at).toLocaleString() : undefined">{{ timeAgo(v.updated_at) }}</span>
+              </template>
+              <template #cell-actions="{ row: v }"><VxButton v-if="mayClear(v)" size="sm" variant="ghost" @click="clearing = v">Clear</VxButton></template>
+            </VxTable>
             <VxButton v-if="other.more" class="more" :loading="other.loading" @click="loadOther(true)">Load more</VxButton>
           </VxLoadState>
         </template>
@@ -328,7 +319,7 @@ async function loadTop() {
 .storage { display: grid; gap: 8px; padding: 14px 16px; }
 .meter { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
 .limits { margin: 0; }
-.value { max-width: 28rem; font-size: 12.5px; }
+:deep(.value) { max-width: 28rem; font-size: 12.5px; }
 .head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 18px; }
 .filters { margin-bottom: 10px; }
 .more { margin-top: 10px; }

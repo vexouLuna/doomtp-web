@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The bot itself, for its admins: health, joining channels, API keys, variable storage limits and the hosts
 // `http get` may fetch, and what every channel inherits (admins, modules, rules, filter, ignored, published).
-import { VxButton, VxCheckbox, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, timeAgo, useToast } from '@vex/ui'
+import { VxButton, VxCheckbox, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxTable, timeAgo, useToast, type TableColumn } from '@vex/ui'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useResource } from '@vex/ui/utils'
@@ -101,6 +101,18 @@ async function revoke() {
     revokeBusy.value = false
   }
 }
+const HEALTH_COLUMNS: TableColumn[] = [
+  { key: 'name', label: 'Component', mono: true },
+  { key: 'status', label: 'Status' },
+  { key: 'detail', label: 'Detail', muted: true, wrap: true },
+]
+const KEY_COLUMNS: TableColumn[] = [
+  { key: 'name', label: 'Name' },
+  { key: 'scopes', label: 'Scopes' },
+  { key: 'created_at', label: 'Created', muted: true },
+  { key: 'last_used_at', label: 'Last used', muted: true },
+  { key: 'actions', label: '', align: 'right', nowrap: true },
+]
 </script>
 
 <template>
@@ -110,18 +122,10 @@ async function revoke() {
       <template v-if="data">
         <section>
           <h2 class="vx-eyebrow sec">Health</h2>
-          <div class="table-scroll vx-panel">
-            <table class="vx-table">
-              <thead><tr><th>Component</th><th>Status</th><th>Detail</th></tr></thead>
-              <tbody>
-                <tr v-for="c in components" :key="c.name">
-                  <td class="vx-mono">{{ c.name }}</td>
-                  <td><VxChip :tone="tone(c.status)">{{ c.status }}</VxChip></td>
-                  <td class="vx-muted detail">{{ c.detail }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <VxTable class="vx-panel" :columns="HEALTH_COLUMNS" :rows="components" row-key="name" label="Health">
+            <template #cell-status="{ row: c }"><VxChip :tone="tone(c.status)">{{ c.status }}</VxChip></template>
+            <template #cell-detail="{ row: c }"><span class="detail">{{ c.detail }}</span></template>
+          </VxTable>
         </section>
 
         <section>
@@ -143,21 +147,12 @@ async function revoke() {
             <code>/api/v2</code> ones (jobs, audit, chat log) are in <a href="/api/v2/docs">their own Swagger UI</a>, open to
             anyone signed in.
           </p>
-          <div class="table-scroll vx-panel">
-            <table class="vx-table">
-              <thead><tr><th>Name</th><th>Scopes</th><th>Created</th><th>Last used</th><th></th></tr></thead>
-              <tbody>
-                <tr v-for="k in data.keys" :key="k.id">
-                  <td>{{ k.name }}</td>
-                  <td><VxChip v-for="s in k.scopes" :key="s" :tone="s === 'write' ? 'warn' : 'default'">{{ s }}</VxChip></td>
-                  <td class="vx-muted">{{ timeAgo(k.created_at) }}</td>
-                  <td class="vx-muted">{{ timeAgo(k.last_used_at) }}</td>
-                  <td class="end"><VxButton size="sm" variant="danger" @click="revoking = k">Revoke</VxButton></td>
-                </tr>
-                <tr v-if="!data.keys.length"><td colspan="5" class="vx-muted">No keys yet.</td></tr>
-              </tbody>
-            </table>
-          </div>
+          <VxTable class="vx-panel" :columns="KEY_COLUMNS" :rows="data.keys" row-key="id" label="API keys" empty="No keys yet.">
+            <template #cell-scopes="{ row: k }"><VxChip v-for="s in k.scopes" :key="s" :tone="s === 'write' ? 'warn' : 'default'">{{ s }}</VxChip></template>
+            <template #cell-created_at="{ row: k }">{{ timeAgo(k.created_at) }}</template>
+            <template #cell-last_used_at="{ row: k }">{{ timeAgo(k.last_used_at) }}</template>
+            <template #cell-actions="{ row: k }"><VxButton size="sm" variant="danger" @click="revoking = k">Revoke</VxButton></template>
+          </VxTable>
           <div class="row"><VxButton @click="keyOpen = true">New key</VxButton></div>
         </section>
 
@@ -222,9 +217,7 @@ section { margin-bottom: 28px; }
 .sec { margin: 0 0 8px; }
 .small { font-size: 13px; margin: 0 0 8px; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 6px; }
-.table-scroll > table { min-width: 34rem; }
 .detail { font-family: var(--vx-font-mono); font-size: 12px; overflow-wrap: anywhere; }
-.end { text-align: right; }
 .vx-chip + .vx-chip { margin-left: 4px; }
 .dialog-form { display: grid; gap: 12px; margin-top: 12px; }
 .secret { margin: 12px 0 0; white-space: pre-wrap; word-break: break-all; user-select: all; color: var(--vx-ink); }

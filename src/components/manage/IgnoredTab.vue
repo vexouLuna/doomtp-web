@@ -2,8 +2,8 @@
 // The users the bot ignores in a channel (and everywhere): their messages are logged but never run commands. With
 // `everywhere`, the bot-wide list alone, for bot admins: `login` is then any joined channel (the bot-wide routes go
 // through one), or null when the bot is in none and the list can only be read.
-import { VxButton, VxCheckbox, VxChip, VxConfirm, VxField, VxInput, timeAgo } from '@vex/ui'
-import { reactive, ref } from 'vue'
+import { VxButton, VxCheckbox, VxChip, VxConfirm, VxField, VxInput, VxTable, timeAgo, type TableColumn } from '@vex/ui'
+import { computed, reactive, ref } from 'vue'
 import ChatLine from '@/components/ChatLine.vue'
 import { can, isMe } from '@/lib/access'
 import { admin, type Ignored } from '@/lib/admin'
@@ -28,6 +28,14 @@ async function ignore() {
   ignoring.login = ''
   ignoring.reason = ''
 }
+const columns = computed<TableColumn[]>(() => [
+  { key: 'login', label: 'User' },
+  ...(props.everywhere ? [] : [{ key: 'everywhere', label: 'Where' }]),
+  { key: 'addedBy', label: 'Ignored by' },
+  { key: 'addedAt', label: 'When', muted: true, nowrap: true },
+  { key: 'reason', label: 'Reason', muted: true, wrap: true, class: 'wrap' },
+  { key: 'actions', label: '', align: 'right', nowrap: true },
+])
 const name = (u: Ignored) => atName(u.login, u.userId)
 /** A moderator lifts ignores in this channel, an admin also bot-wide ones; anyone may lift their own self-ignore. */
 const mayLift = (u: Ignored, at: string) => (u.self && isMe(u.userId)) || (can('ignored.edit', at) && (!u.everywhere || can('ignored.everywhere')))
@@ -49,35 +57,27 @@ const lift = (u: Ignored, at: string) =>
       <ChatLine :lines="`${sign}ignore me`" :sign="sign" /> and take it back with
       <ChatLine :lines="`${sign}unignore me`" :sign="sign" />.
     </p>
-    <div class="table-scroll vx-panel">
-      <table class="vx-table">
-        <thead><tr><th>User</th><th v-if="!everywhere">Where</th><th>Ignored by</th><th>When</th><th>Reason</th><th></th></tr></thead>
-        <tbody>
-          <tr v-for="u in ignored" :key="`${u.everywhere}${u.userId}`">
-            <td>
-              <span v-if="u.login">@{{ u.login }}</span>
-              <span v-else class="vx-mono">{{ u.userId }}</span>
-            </td>
-            <td v-if="!everywhere">{{ u.everywhere ? 'every channel' : 'this channel' }}</td>
-            <td>
-              <VxChip v-if="u.self" tone="accent" title="They asked for it, so they can undo it themselves">themselves</VxChip>
-              <span v-else-if="u.addedByLogin">@{{ u.addedByLogin }}</span>
-              <span v-else-if="u.addedBy" class="vx-mono">{{ u.addedBy }}</span>
-              <span v-else class="vx-muted" title="Set with the admin password or an API key">admin</span>
-            </td>
-            <td class="vx-muted nowrap" :title="u.addedAt ? new Date(u.addedAt).toLocaleString() : undefined">{{ timeAgo(u.addedAt) }}</td>
-            <td class="vx-muted wrap">{{ u.reason ?? '' }}</td>
-            <td class="end">
-              <template v-if="login">
-                <VxButton v-if="u.self && isMe(u.userId)" size="sm" @click="lifting = u">Stop ignoring me</VxButton>
-                <VxButton v-else-if="mayLift(u, login)" size="sm" variant="ghost" @click="lifting = u">Unignore</VxButton>
-              </template>
-            </td>
-          </tr>
-          <tr v-if="!ignored.length"><td :colspan="everywhere ? 5 : 6" class="vx-muted">Nobody is ignored {{ everywhere ? 'everywhere' : 'here' }}.</td></tr>
-        </tbody>
-      </table>
-    </div>
+    <VxTable class="vx-panel" :columns="columns" :rows="ignored" :row-key="(u) => `${u.everywhere}${u.userId}`" label="Ignored users">
+      <template #cell-login="{ row }">
+        <span v-if="row.login">@{{ row.login }}</span>
+        <span v-else class="vx-mono">{{ row.userId }}</span>
+      </template>
+      <template #cell-everywhere="{ row }">{{ row.everywhere ? 'every channel' : 'this channel' }}</template>
+      <template #cell-addedBy="{ row }">
+        <VxChip v-if="row.self" tone="accent" title="They asked for it, so they can undo it themselves">themselves</VxChip>
+        <span v-else-if="row.addedByLogin">@{{ row.addedByLogin }}</span>
+        <span v-else-if="row.addedBy" class="vx-mono">{{ row.addedBy }}</span>
+        <span v-else class="vx-muted" title="Set with the admin password or an API key">admin</span>
+      </template>
+      <template #cell-addedAt="{ row }"><span :title="row.addedAt ? new Date(row.addedAt).toLocaleString() : undefined">{{ timeAgo(row.addedAt) }}</span></template>
+      <template #cell-actions="{ row }">
+        <template v-if="login">
+          <VxButton v-if="row.self && isMe(row.userId)" size="sm" @click="lifting = row">Stop ignoring me</VxButton>
+          <VxButton v-else-if="mayLift(row, login)" size="sm" variant="ghost" @click="lifting = row">Unignore</VxButton>
+        </template>
+      </template>
+      <template #empty>Nobody is ignored {{ everywhere ? 'everywhere' : 'here' }}.</template>
+    </VxTable>
     <form v-if="mayAdd(login)" class="add vx-form-row vx-panel" @submit.prevent="ignore">
       <VxField label="User">
         <template #default="{ id }"><VxInput :id="id" v-model="ignoring.login" mono placeholder="twitch login" /></template>

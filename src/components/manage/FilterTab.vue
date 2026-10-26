@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // A word filter: a channel's own (with the bot-wide list it can't change, and a box to try a message on both), or,
 // without a channel, the bot-wide list itself on the Bot page. The same entries `filter` adds and edits in chat.
-import { VxButton, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxSelect, VxSwitch, useToast } from '@vex/ui'
+import { VxButton, VxChip, VxConfirm, VxDialog, VxEmptyState, VxField, VxInput, VxSelect, VxSwitch, VxTable, useToast, type TableColumn } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import { can } from '@/lib/access'
 import { admin, type FilterBody, type FilterEntry, type FilterPatch, type FilterTest } from '@/lib/admin'
@@ -25,6 +25,15 @@ const send = {
   remove: (id: number) => (props.login ? admin.deleteFilter(props.login, id) : admin.deleteGlobalFilter(id)),
 }
 
+const COLUMNS: TableColumn[] = [
+  { key: 'pattern', label: 'Pattern', mono: true, wrap: true, class: 'wrap' },
+  { key: 'kind', label: 'Kind' },
+  { key: 'action', label: 'Action' },
+  { key: 'category', label: 'Category', muted: true },
+  { key: 'enabled', label: 'On' },
+  { key: 'actions', label: '', align: 'right', nowrap: true },
+]
+const GLOBAL_COLUMNS = COLUMNS.slice(0, 3).concat({ key: 'enabled', label: 'State' })
 const KINDS = ['word', 'wildcard', 'regex', 'allow'].map((v) => ({ value: v, label: v }))
 const ACTIONS = ['mask', 'replace', 'tag', 'block'].map((v) => ({ value: v, label: v }))
 const blank = () => ({ pattern: '', kind: 'word', action: 'mask', category: '', replacement: '' })
@@ -86,32 +95,22 @@ const automodSays = (t: FilterTest) => {
 <template>
   <section class="mtab">
     <h2 v-if="login" class="vx-eyebrow sub">This channel</h2>
-    <div v-if="filters.length" class="table-scroll vx-panel">
-      <table class="vx-table">
-        <thead><tr><th>Pattern</th><th>Kind</th><th>Action</th><th>Category</th><th>On</th><th></th></tr></thead>
-        <tbody>
-          <tr v-for="f in filters" :key="f.id">
-            <td class="vx-mono wrap">{{ f.pattern }}</td>
-            <td>{{ f.kind }}</td>
-            <td>{{ f.action }}<span v-if="f.replacement" class="vx-muted"> → {{ f.replacement }}</span></td>
-            <td class="vx-muted">{{ f.category }}</td>
-            <td>
-              <VxSwitch
-                :model-value="f.enabled"
-                :disabled="!mayEdit || busy.has(`f:${f.id}`)"
-                @update:model-value="(on: boolean) => act(`f:${f.id}`, () => send.edit(f.id, { enabled: on }), `${f.pattern} turned ${onOff(on)}`)"
-              ><span class="sr-only">Filter {{ f.pattern }}</span></VxSwitch>
-            </td>
-            <td class="end">
-              <template v-if="mayEdit">
-                <VxButton size="sm" variant="ghost" @click="edit(f)">Edit</VxButton>
-                <VxButton size="sm" variant="ghost" @click="deleting = f.id">Delete</VxButton>
-              </template>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <VxTable v-if="filters.length" class="vx-panel" :columns="COLUMNS" :rows="filters" row-key="id" label="This channel's filter">
+      <template #cell-action="{ row }">{{ row.action }}<span v-if="row.replacement" class="vx-muted"> â†’ {{ row.replacement }}</span></template>
+      <template #cell-enabled="{ row }">
+        <VxSwitch
+          :model-value="row.enabled"
+          :disabled="!mayEdit || busy.has(`f:${row.id}`)"
+          @update:model-value="(on: boolean) => act(`f:${row.id}`, () => send.edit(row.id, { enabled: on }), `${row.pattern} turned ${onOff(on)}`)"
+        ><span class="sr-only">Filter {{ row.pattern }}</span></VxSwitch>
+      </template>
+      <template #cell-actions="{ row }">
+        <template v-if="mayEdit">
+          <VxButton size="sm" variant="ghost" @click="edit(row)">Edit</VxButton>
+          <VxButton size="sm" variant="ghost" @click="deleting = row.id">Delete</VxButton>
+        </template>
+      </template>
+    </VxTable>
     <VxEmptyState v-else :title="login ? 'No entries for this channel' : 'The bot-wide list is empty'" :text="mayEdit ? 'Add a word or pattern below.' : undefined" />
     <form v-if="mayEdit" class="add vx-form-row vx-panel" @submit.prevent="add">
       <VxField label="Pattern">
@@ -150,20 +149,10 @@ const automodSays = (t: FilterTest) => {
         The bot's own list applies in every channel and can't be changed from one. An <code>allow</code> entry
         above keeps a longer word that merely contains a banned one from being caught.
       </p>
-      <div class="table-scroll vx-panel">
-        <table class="vx-table">
-          <thead><tr><th>Pattern</th><th>Kind</th><th>Action</th><th>State</th></tr></thead>
-          <tbody>
-            <tr v-for="f in globalFilters ?? []" :key="f.id">
-              <td class="vx-mono wrap">{{ f.pattern }}</td>
-              <td>{{ f.kind }}</td>
-              <td>{{ f.action }}<span v-if="f.replacement" class="vx-muted"> → {{ f.replacement }}</span></td>
-              <td><VxChip :tone="f.enabled ? 'ok' : 'default'">{{ onOff(f.enabled) }}</VxChip></td>
-            </tr>
-            <tr v-if="!globalFilters?.length"><td colspan="4" class="vx-muted">The bot-wide list is empty.</td></tr>
-          </tbody>
-        </table>
-      </div>
+      <VxTable class="vx-panel" :columns="GLOBAL_COLUMNS" :rows="globalFilters ?? []" row-key="id" label="Bot-wide filter" empty="The bot-wide list is empty.">
+        <template #cell-action="{ row }">{{ row.action }}<span v-if="row.replacement" class="vx-muted"> â†’ {{ row.replacement }}</span></template>
+        <template #cell-enabled="{ row }"><VxChip :tone="row.enabled ? 'ok' : 'default'">{{ onOff(row.enabled) }}</VxChip></template>
+      </VxTable>
     </template>
 
     <VxDialog :open="editing !== null" title="Edit filter entry" @update:open="(v: boolean) => { if (!v) editing = null }">

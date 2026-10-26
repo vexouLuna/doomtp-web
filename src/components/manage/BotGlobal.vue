@@ -2,7 +2,7 @@
 // What reaches every channel, for bot admins: the admins themselves (`admin add|remove`, bot owners only), the
 // bot-wide module toggles and command rules every channel inherits, the bot-wide word filter, who is ignored
 // everywhere, and the commands and packs published everywhere.
-import { VxButton, VxChip, VxConfirm, VxField, VxInput, VxLoadState, VxSegmented } from '@vex/ui'
+import { VxButton, VxChip, VxConfirm, VxField, VxInput, VxLoadState, VxSegmented, VxTable, type TableColumn } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -111,7 +111,36 @@ async function publish() {
   if (ok) Object.assign(publishing, { command: '', as: '', pack: '', owner: '' })
 }
 const mayPublish = computed(() => (publishing.mode === 'command' ? !!publishing.command.trim() : !!publishing.pack.trim()))
-const unpublishing = ref<{ kind: 'command' | 'pack'; name: string; owner?: string } | null>(null)
+const MODULE_COLUMNS: TableColumn[] = [
+  { key: 'module', label: 'Module', mono: true },
+  { key: 'kind', label: 'Kind', muted: true },
+  { key: 'enabled', label: 'Everywhere' },
+]
+const PUBLISHED_COLUMNS: TableColumn[] = [
+  { key: 'name', label: 'Name' },
+  { key: 'owner', label: 'Owner', muted: true },
+  { key: 'what', label: 'What', muted: true },
+  { key: 'actions', label: '', align: 'right', nowrap: true },
+]
+type Unpublishing = { kind: 'command' | 'pack'; name: string; owner?: string }
+/** Commands and packs published everywhere, as one list. */
+const published = computed(() => [
+  ...(data.value?.published ?? []).map((c) => ({
+    key: `c:${c.published_as}`,
+    name: c.published_as,
+    owner: c.owner,
+    what: c.summary ?? (c.name !== c.published_as ? `as ${c.name}` : 'command'),
+    unpublish: { kind: 'command', name: c.published_as } as Unpublishing,
+  })),
+  ...(data.value?.packs ?? []).map((p) => ({
+    key: `p:${p.name}:${p.commands[0]?.owner}`,
+    name: p.name,
+    owner: p.commands[0]?.owner ?? '',
+    what: p.summary ?? `${p.commands.length} commands`,
+    unpublish: { kind: 'pack', name: p.name, owner: p.commands[0]?.owner } as Unpublishing,
+  })),
+])
+const unpublishing = ref<Unpublishing | null>(null)
 function unpublish() {
   const u = unpublishing.value
   if (!u) return
@@ -164,28 +193,19 @@ function unpublish() {
             "Each channel" leaves a module to the channels (on unless one turns it off). On or off here applies wherever a
             channel hasn't set its own.
           </p>
-          <div class="table-scroll vx-panel">
-            <table class="vx-table">
-              <thead><tr><th>Module</th><th>Kind</th><th>Everywhere</th></tr></thead>
-              <tbody>
-                <tr v-for="m in data.modules" :key="m.module">
-                  <td class="vx-mono">{{ m.module }}</td>
-                  <td class="vx-muted">{{ m.kind ?? '' }}</td>
-                  <td>
-                    <VxSegmented
-                      v-if="m.toggleable"
-                      :model-value="moduleState(m.enabled)"
-                      :options="MODULE_STATES"
-                      :label="`${m.module} everywhere`"
-                      :disabled="busy.has(`m:${m.module}`)"
-                      @update:model-value="(v?: string) => v && setModule(m.module, v)"
-                    />
-                    <span v-else class="vx-muted">always on</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <VxTable class="vx-panel" :columns="MODULE_COLUMNS" :rows="data.modules" row-key="module" label="Modules everywhere">
+            <template #cell-enabled="{ row }">
+              <VxSegmented
+                v-if="row.toggleable"
+                :model-value="moduleState(row.enabled)"
+                :options="MODULE_STATES"
+                :label="`${row.module} everywhere`"
+                :disabled="busy.has(`m:${row.module}`)"
+                @update:model-value="(v?: string) => v && setModule(row.module, v)"
+              />
+              <span v-else class="vx-muted">always on</span>
+            </template>
+          </VxTable>
         </template>
 
         <RulesTab v-else-if="section === 'rules'" :login="null" :sign="sign" :commands="data.commands" :reference="data.reference" :roles="data.roles" :reload="reload" />
@@ -199,28 +219,11 @@ function unpublish() {
             Commands and packs every channel has, as <code>cc publish &lt;name&gt; global</code> does in chat. A channel still
             turns them off for itself.
           </p>
-          <div class="table-scroll vx-panel">
-            <table class="vx-table">
-              <thead><tr><th>Name</th><th>Owner</th><th>What</th><th></th></tr></thead>
-              <tbody>
-                <tr v-for="c in data.published" :key="`c:${c.published_as}`">
-                  <td class="vx-mono">{{ c.published_as }}</td>
-                  <td class="vx-muted">{{ c.owner }}</td>
-                  <td class="vx-muted">{{ c.summary ?? (c.name !== c.published_as ? `as ${c.name}` : 'command') }}</td>
-                  <td class="end"><VxButton size="sm" variant="ghost" @click="unpublishing = { kind: 'command', name: c.published_as }">Unpublish</VxButton></td>
-                </tr>
-                <tr v-for="p in data.packs" :key="`p:${p.name}:${p.commands[0]?.owner}`">
-                  <td class="vx-mono">{{ p.name }} <VxChip>pack</VxChip></td>
-                  <td class="vx-muted">{{ p.commands[0]?.owner ?? '' }}</td>
-                  <td class="vx-muted">{{ p.summary ?? `${p.commands.length} commands` }}</td>
-                  <td class="end">
-                    <VxButton size="sm" variant="ghost" @click="unpublishing = { kind: 'pack', name: p.name, owner: p.commands[0]?.owner }">Unpublish</VxButton>
-                  </td>
-                </tr>
-                <tr v-if="!data.published.length && !data.packs.length"><td colspan="4" class="vx-muted">Nothing is published everywhere.</td></tr>
-              </tbody>
-            </table>
-          </div>
+          <VxTable class="vx-panel" :columns="PUBLISHED_COLUMNS" :rows="published" row-key="key" label="Published everywhere">
+            <template #cell-name="{ row }"><span class="vx-mono">{{ row.name }}</span> <VxChip v-if="row.unpublish.kind === 'pack'">pack</VxChip></template>
+            <template #cell-actions="{ row }"><VxButton size="sm" variant="ghost" @click="unpublishing = row.unpublish">Unpublish</VxButton></template>
+            <template #empty>Nothing is published everywhere.</template>
+          </VxTable>
           <form class="publish vx-panel" @submit.prevent="publish">
             <VxSegmented v-model="publishing.mode" :options="PUBLISH_MODES" label="What to publish" />
             <template v-if="publishing.mode === 'command'">
