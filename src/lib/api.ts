@@ -19,27 +19,12 @@ function once<T>(load: () => Promise<T>): () => Promise<T> {
 export const auth = {
   csrf: null as string | null,
   onUnauthorized: null as (() => void) | null,
-  /** The `X-View-As` value while an admin previews the site as someone else (lib/session.ts), or null. */
-  viewAs: null as (() => string | null) | null,
 }
 
-/** Sets the preview's `X-View-As` on a call (bot ADR-0030): the bot then answers as that viewer would be answered, and
- *  refuses every change. */
-export function previewHeader(headers: Headers) {
-  const as = auth.viewAs?.()
-  if (as && !headers.has('X-View-As')) headers.set('X-View-As', as)
-}
-
-/** Whether a 401 means the session ended: under a signed-out preview the bot answers 401 for what that viewer can't
- *  read, and says so with `X-View-As` on the answer. */
-export const sessionEnded = (res: Response) => res.status === 401 && !res.headers.has('X-View-As')
-
-/** `unscoped`: as the admin, without the preview's header (the session itself, and the "View as" picker's reads).
- *  `v2`: from /api/v2 (ADR-0027). A failure is a ProblemError either way: v1's `detail` reads the same. */
-export async function request<T>(path: string, init: RequestInit = {}, { unscoped = false, v2 = false } = {}): Promise<T> {
+/** `v2`: from /api/v2 (ADR-0027). A failure is a ProblemError either way: v1's `detail` reads the same. */
+export async function request<T>(path: string, init: RequestInit = {}, { v2 = false } = {}): Promise<T> {
   const headers = new Headers(init.headers)
   const method = (init.method ?? 'GET').toUpperCase()
-  if (!unscoped) previewHeader(headers)
   if (method !== 'GET' && auth.csrf) headers.set('X-CSRF-Token', auth.csrf)
   let response: Response
   try {
@@ -48,7 +33,7 @@ export async function request<T>(path: string, init: RequestInit = {}, { unscope
     throw new ProblemError(0, { detail: "Couldn't reach the bot." })
   }
   if (!response.ok) {
-    if (sessionEnded(response)) auth.onUnauthorized?.()
+    if (response.status === 401) auth.onUnauthorized?.()
     throw await ProblemError.from(response)
   }
   if (response.status === 204) return undefined as T
@@ -66,6 +51,12 @@ export interface SiteChannel {
   login: string
   prefix: string
   tier: string
+  /** The bot logs this channel but never sends a message there (bots before the site fields leave these out). */
+  read_only?: boolean
+  can_moderate?: boolean
+  logs_public?: boolean
+  /** When the bot first joined, epoch ms. */
+  joined_at?: number | null
 }
 export interface Site {
   version: string

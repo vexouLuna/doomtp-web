@@ -14,7 +14,7 @@ import App from './App.vue'
 import { isAdmin } from './lib/access'
 import { account } from './lib/account'
 import { hashPosition } from './lib/hash'
-import { ensure, previewing, realSession as session, setExpiredHandler, twitchLoginUrl } from './lib/session'
+import { ensure, session, setExpiredHandler, twitchLoginUrl } from './lib/session'
 
 // The same URLs as the bot's own pages, so links already out there (chat's explain links included) keep working.
 const router = createRouter({
@@ -25,6 +25,8 @@ const router = createRouter({
     { path: '/docs/commands', component: () => import('./pages/CommandsPage.vue') },
     { path: '/docs/language', component: () => import('./pages/LanguagePage.vue') },
     { path: '/docs/api', component: () => import('./pages/ApiPage.vue') },
+    { path: '/stats', component: () => import('./pages/StatsPage.vue') },
+    { path: '/channels', component: () => import('./pages/ChannelsPage.vue') },
     { path: '/channels/:login', component: () => import('./pages/ChannelPage.vue'), props: true },
     { path: '/explain/:token', component: () => import('./pages/ExplainPage.vue'), props: true },
     // Manage. Every page needs a session (see src/lib/session.ts); what each shows depends on its rank.
@@ -61,8 +63,6 @@ setExpiredHandler(() => {
 router.beforeEach(async (to) => {
   if (!to.path.startsWith('/manage')) return true
   await ensure()
-  // An admin viewing the site as someone signed out gets what they would: no Manage pages.
-  if (previewing()?.role === 'signed-out') return '/'
   if (session.authenticated) return true
   if (session.twitchLogin && !session.notice) {
     window.location.assign(twitchLoginUrl(to.fullPath))

@@ -12,6 +12,7 @@ import { errorText } from '@vex/platform-web'
 import { LOG_LEVELS } from '@/lib/modules'
 import { onOff, useAct } from '@/lib/useAct'
 import { conditions, cooldowns, matches, NEEDS } from '@/lib/triggers'
+import { api, type LanguageEvent } from '@/lib/api'
 
 const props = defineProps<{ login: string; sign: string; triggers: Trigger[]; capabilities: string[]; reload: () => Promise<void> }>()
 const { busy, act } = useAct(props.reload)
@@ -21,7 +22,7 @@ const deleting = ref<number | null>(null)
 // ── the new-trigger form: its fields follow the kind picked ──
 const KINDS = [
   { value: 'listener', label: 'Listener', hint: 'runs on chat messages that match a pattern' },
-  { value: 'event', label: 'Twitch event', hint: 'a raid, sub, cheer, follow, redemption, or the stream going live' },
+  { value: 'event', label: 'Twitch event', hint: 'a raid, sub, cheer, follow, redemption, emote pyramid, or the stream going live' },
   { value: 'timer', label: 'Timer', hint: 'every so often' },
   { value: 'cron', label: 'Cron', hint: 'at set times, in the channel’s time zone' },
 ] as const
@@ -84,6 +85,16 @@ const eventOptions = computed(() =>
     return { value: e, label: missing ? `${e} (the channel hasn't granted ${need})` : e }
   }),
 )
+// What the picked event is and the `{event.*}` it carries, from the language reference the docs print.
+const events = ref<LanguageEvent[]>([])
+api.language().then((l) => (events.value = l.events), () => {})
+const eventHelp = computed(() => {
+  if (editing.value) return 'A trigger keeps its event: add a new one for another.'
+  const e = events.value.find((x) => x.type === form.event)
+  if (!e) return undefined
+  const fields = e.variables.map((v) => `{event.${v.name}}`).join(' ')
+  return fields ? `${e.fires} It carries ${fields}.` : e.fires
+})
 const UNITS = [{ value: 's', label: 'seconds' }, { value: 'm', label: 'minutes' }, { value: 'h', label: 'hours' }]
 const LOGS = LOG_LEVELS.map((l) => ({ value: l, label: l }))
 
@@ -232,7 +243,7 @@ const toast = useToast()
             <template #default="{ id }"><VxInput :id="id" v-model="form.name" mono /></template>
           </VxField>
         </template>
-        <VxField v-else-if="form.kind === 'event'" label="Event" :help="editing ? 'A trigger keeps its event: add a new one for another.' : undefined">
+        <VxField v-else-if="form.kind === 'event'" label="Event" :help="eventHelp">
           <template #default="{ id }"><VxSelect :id="id" v-model="form.event" :options="eventOptions" width="100%" :disabled="!!editing" /></template>
         </VxField>
         <template v-else>
