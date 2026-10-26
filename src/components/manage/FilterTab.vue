@@ -96,7 +96,7 @@ const automodSays = (t: FilterTest) => {
   <section class="mtab">
     <h2 v-if="login" class="vx-eyebrow sub">This channel</h2>
     <VxTable v-if="filters.length" class="vx-panel" :columns="COLUMNS" :rows="filters" row-key="id" label="This channel's filter">
-      <template #cell-action="{ row }">{{ row.action }}<span v-if="row.replacement" class="vx-muted"> â†’ {{ row.replacement }}</span></template>
+      <template #cell-action="{ row }">{{ row.action }}<span v-if="row.replacement" class="vx-muted"> → {{ row.replacement }}</span></template>
       <template #cell-enabled="{ row }">
         <VxSwitch
           :model-value="row.enabled"
@@ -150,7 +150,7 @@ const automodSays = (t: FilterTest) => {
         above keeps a longer word that merely contains a banned one from being caught.
       </p>
       <VxTable class="vx-panel" :columns="GLOBAL_COLUMNS" :rows="globalFilters ?? []" row-key="id" label="Bot-wide filter" empty="The bot-wide list is empty.">
-        <template #cell-action="{ row }">{{ row.action }}<span v-if="row.replacement" class="vx-muted"> â†’ {{ row.replacement }}</span></template>
+        <template #cell-action="{ row }">{{ row.action }}<span v-if="row.replacement" class="vx-muted"> → {{ row.replacement }}</span></template>
         <template #cell-enabled="{ row }"><VxChip :tone="row.enabled ? 'ok' : 'default'">{{ onOff(row.enabled) }}</VxChip></template>
       </VxTable>
     </template>

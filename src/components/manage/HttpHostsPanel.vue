@@ -82,7 +82,7 @@ const saveLimits = () => act('limits', () => admin.setHttpLimits(limitsPatch.val
             <span v-else class="vx-muted">none</span>
           </template>
           <template #cell-added_at="{ row }">
-            <span :title="row.added_at ? new Date(row.added_at).toLocaleString() : undefined">{{ timeAgo(row.added_at) }}<template v-if="row.added_by"> Â· {{ row.added_by }}</template></span>
+            <span :title="row.added_at ? new Date(row.added_at).toLocaleString() : undefined">{{ timeAgo(row.added_at) }}<template v-if="row.added_by"> · {{ row.added_by }}</template></span>
           </template>
           <template #cell-actions="{ row }">
             <VxButton size="sm" variant="ghost" @click="editSecret(row)">{{ row.secret ? 'Replace secret' : 'Add secret' }}</VxButton>

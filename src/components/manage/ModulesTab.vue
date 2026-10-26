@@ -31,10 +31,10 @@ const resetModule = (name: string) =>
     <VxTable class="vx-panel" :columns="COLUMNS" :rows="modules" row-key="name" label="Modules">
       <template #cell-name="{ row: m }">
         <span class="vx-mono">{{ m.name }}</span>
-        <VxChip v-if="m.kind === 'pack'" :tone="m.scope === 'global' ? 'default' : 'accent'">{{ m.scope === 'global' ? 'pack Â· everywhere' : 'pack' }}</VxChip>
+        <VxChip v-if="m.kind === 'pack'" :tone="m.scope === 'global' ? 'default' : 'accent'">{{ m.scope === 'global' ? 'pack · everywhere' : 'pack' }}</VxChip>
         <VxChip v-else-if="m.kind === 'custom'">custom</VxChip>
         <div v-if="m.summary || m.owners.length" class="vx-muted small">
-          {{ m.summary }}<template v-if="m.owners.length"> Â· by {{ m.owners.map((o) => `@${o}`).join(', ') }}</template>
+          {{ m.summary }}<template v-if="m.owners.length"> · by {{ m.owners.map((o) => `@${o}`).join(', ') }}</template>
         </div>
       </template>
       <template #cell-commands="{ row: m }">
