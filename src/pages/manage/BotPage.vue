@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The bot itself, for its admins: health, joining channels, API keys, variable storage limits and the hosts
 // `http get` may fetch, and what every channel inherits (admins, modules, rules, filter, ignored, published).
-import { VxButton, VxCallout, VxCheckbox, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxSkeleton, timeAgo, useToast } from '@vex/ui'
+import { VxButton, VxCheckbox, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, timeAgo, useToast } from '@vex/ui'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useResource } from '@vex/ui/utils'
@@ -106,83 +106,80 @@ async function revoke() {
 <template>
   <ManageShell title="Bot">
     <VxEmptyState v-if="!allowed" code="403" title="Bot admins only" text="This page runs the bot itself: its health, joining channels and API keys." />
-    <VxCallout v-else-if="error" tone="error" title="Couldn't load the bot's state">
-      {{ errorText(error) }}
-      <template #actions><VxButton size="sm" @click="reload">Try again</VxButton></template>
-    </VxCallout>
-    <div v-else-if="!data" class="loading" aria-busy="true"><VxSkeleton v-for="i in 8" :key="i" h="38px" /></div>
-    <template v-else>
-      <section>
-        <h2 class="vx-eyebrow sec">Health</h2>
-        <div class="table-scroll vx-panel">
-          <table class="vx-table">
-            <thead><tr><th>Component</th><th>Status</th><th>Detail</th></tr></thead>
-            <tbody>
-              <tr v-for="c in components" :key="c.name">
-                <td class="vx-mono">{{ c.name }}</td>
-                <td><VxChip :tone="tone(c.status)">{{ c.status }}</VxChip></td>
-                <td class="vx-muted detail">{{ c.detail }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+    <VxLoadState v-else :error="error" :stale="!!data" :loading="!data" error-title="Couldn't load the bot's state" :error-text="errorText" :rows="8" @retry="reload">
+      <template v-if="data">
+        <section>
+          <h2 class="vx-eyebrow sec">Health</h2>
+          <div class="table-scroll vx-panel">
+            <table class="vx-table">
+              <thead><tr><th>Component</th><th>Status</th><th>Detail</th></tr></thead>
+              <tbody>
+                <tr v-for="c in components" :key="c.name">
+                  <td class="vx-mono">{{ c.name }}</td>
+                  <td><VxChip :tone="tone(c.status)">{{ c.status }}</VxChip></td>
+                  <td class="vx-muted detail">{{ c.detail }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-      <section>
-        <h2 class="vx-eyebrow sec">Join a channel</h2>
-        <form class="row" @submit.prevent="join">
-          <label class="sr-only" for="join-login">Channel to join</label>
-          <VxInput id="join-login" v-model="joinLogin" placeholder="channel login" mono grow width="14rem" max-width="20rem" />
-          <VxButton type="submit" :loading="joining" :disabled="!joinLogin.trim()">Join channel</VxButton>
-        </form>
-        <p class="vx-muted small">The same as <code>join</code> in chat: the bot joins and subscribes to the channel's events.</p>
-      </section>
+        <section>
+          <h2 class="vx-eyebrow sec">Join a channel</h2>
+          <form class="row" @submit.prevent="join">
+            <label class="sr-only" for="join-login">Channel to join</label>
+            <VxInput id="join-login" v-model="joinLogin" placeholder="channel login" mono grow width="14rem" max-width="20rem" />
+            <VxButton type="submit" :loading="joining" :disabled="!joinLogin.trim()">Join channel</VxButton>
+          </form>
+          <p class="vx-muted small">The same as <code>join</code> in chat: the bot joins and subscribes to the channel's events.</p>
+        </section>
 
-      <section>
-        <h2 class="vx-eyebrow sec">API keys</h2>
-        <p class="vx-muted small">
-          Keys for <code>/api/v1</code>. A <code>read</code> key sees configuration and logs; a <code>write</code> key
-          also changes them. The key is shown once, when it's made, and only its hash is kept: if it's lost, revoke it
-          and make another. The routes are on the <RouterLink to="/docs/api">API page</RouterLink>; the
-          <code>/api/v2</code> ones (jobs, audit, chat log) are in <a href="/api/v2/docs">their own Swagger UI</a>, open to
-          anyone signed in.
-        </p>
-        <div class="table-scroll vx-panel">
-          <table class="vx-table">
-            <thead><tr><th>Name</th><th>Scopes</th><th>Created</th><th>Last used</th><th></th></tr></thead>
-            <tbody>
-              <tr v-for="k in data.keys" :key="k.id">
-                <td>{{ k.name }}</td>
-                <td><VxChip v-for="s in k.scopes" :key="s" :tone="s === 'write' ? 'warn' : 'default'">{{ s }}</VxChip></td>
-                <td class="vx-muted">{{ timeAgo(k.created_at) }}</td>
-                <td class="vx-muted">{{ timeAgo(k.last_used_at) }}</td>
-                <td class="end"><VxButton size="sm" variant="danger" @click="revoking = k">Revoke</VxButton></td>
-              </tr>
-              <tr v-if="!data.keys.length"><td colspan="5" class="vx-muted">No keys yet.</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="row"><VxButton @click="keyOpen = true">New key</VxButton></div>
-      </section>
+        <section>
+          <h2 class="vx-eyebrow sec">API keys</h2>
+          <p class="vx-muted small">
+            Keys for <code>/api/v1</code>. A <code>read</code> key sees configuration and logs; a <code>write</code> key
+            also changes them. The key is shown once, when it's made, and only its hash is kept: if it's lost, revoke it
+            and make another. The routes are on the <RouterLink to="/docs/api">API page</RouterLink>; the
+            <code>/api/v2</code> ones (jobs, audit, chat log) are in <a href="/api/v2/docs">their own Swagger UI</a>, open to
+            anyone signed in.
+          </p>
+          <div class="table-scroll vx-panel">
+            <table class="vx-table">
+              <thead><tr><th>Name</th><th>Scopes</th><th>Created</th><th>Last used</th><th></th></tr></thead>
+              <tbody>
+                <tr v-for="k in data.keys" :key="k.id">
+                  <td>{{ k.name }}</td>
+                  <td><VxChip v-for="s in k.scopes" :key="s" :tone="s === 'write' ? 'warn' : 'default'">{{ s }}</VxChip></td>
+                  <td class="vx-muted">{{ timeAgo(k.created_at) }}</td>
+                  <td class="vx-muted">{{ timeAgo(k.last_used_at) }}</td>
+                  <td class="end"><VxButton size="sm" variant="danger" @click="revoking = k">Revoke</VxButton></td>
+                </tr>
+                <tr v-if="!data.keys.length"><td colspan="5" class="vx-muted">No keys yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="row"><VxButton @click="keyOpen = true">New key</VxButton></div>
+        </section>
 
-      <section>
-        <h2 class="vx-eyebrow sec">Variable storage limits</h2>
-        <p class="vx-muted small">
-          How much each channel, publisher and chatter may store in variables. The same as
-          <code>admin quota</code>, <code>valuecap</code>, <code>listitems</code> and <code>names</code> in chat.
-        </p>
-        <LimitsPanel />
-      </section>
+        <section>
+          <h2 class="vx-eyebrow sec">Variable storage limits</h2>
+          <p class="vx-muted small">
+            How much each channel, publisher and chatter may store in variables. The same as
+            <code>admin quota</code>, <code>valuecap</code>, <code>listitems</code> and <code>names</code> in chat.
+          </p>
+          <LimitsPanel />
+        </section>
 
-      <section>
-        <h2 class="vx-eyebrow sec">HTTP hosts</h2>
-        <p class="vx-muted small">The hosts custom commands may fetch with <code>http get</code>, the same as <code>admin http</code> in chat.</p>
-        <HttpHostsPanel />
-      </section>
+        <section>
+          <h2 class="vx-eyebrow sec">HTTP hosts</h2>
+          <p class="vx-muted small">The hosts custom commands may fetch with <code>http get</code>, the same as <code>admin http</code> in chat.</p>
+          <HttpHostsPanel />
+        </section>
 
-      <BotGlobal />
+        <BotGlobal />
 
-    </template>
+      </template>
+    </VxLoadState>
 
     <VxDialog v-model:open="keyOpen" title="New API key">
       <form id="new-key" class="dialog-form" @submit.prevent="createKey">
@@ -217,7 +214,6 @@ async function revoke() {
 </template>
 
 <style scoped>
-.loading { display: grid; gap: 6px; }
 section { margin-bottom: 28px; }
 .sec { margin: 0 0 8px; }
 .small { font-size: 13px; margin: 0 0 8px; }

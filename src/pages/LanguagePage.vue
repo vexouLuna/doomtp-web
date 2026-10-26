@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { VxButton, VxCallout, VxSkeleton, VxToc } from '@vex/ui'
+import { VxLoadState, VxToc } from '@vex/ui'
 import { computed, onMounted } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -99,113 +99,109 @@ const limits = computed(() => {
         <li>Only the final result is sent to chat.</li>
       </ul>
 
-      <VxCallout v-if="error" tone="error" title="Couldn't load the language details">
-        {{ errorText(error) }}
-        <template #actions><VxButton size="sm" @click="reload">Try again</VxButton></template>
-      </VxCallout>
-      <div v-else-if="!data" class="loading" aria-busy="true"><VxSkeleton v-for="i in 6" :key="i" h="28px" /></div>
-
-      <template v-if="data">
-        <h2 class="vx-display">Operators</h2>
-        <p>
-          These count as operators only when they stand alone between spaces, so ordinary chat like
-          <code>(lol)</code> or <code>a->b</code> is never mistaken for one.
-        </p>
-        <p class="list">
-          <template v-for="(op, i) in data.language.operators.filter((o) => o !== ';')" :key="op"><template v-if="i"> · </template><code>{{ op }}</code></template>
-        </p>
-        <p><code>;</code> is reserved: it is rejected with a clear error.</p>
-
-        <h2 class="vx-display">Placeholders</h2>
-        <p>
-          <code>{reference}</code>, <code>{reference:type}</code>, <code>{reference ?? fallback}</code>, or an
-          expression such as <code>{channel.deaths + 1 > 10}</code>. A reference
-          that isn't available in the current context is an error before anything runs, and a missing value without a
-          <code>??</code> fallback stops the command.
-        </p>
-        <h3>Roots</h3>
-        <p class="list">
-          <template v-for="(root, i) in data.language.roots" :key="root"><template v-if="i"> · </template><code>{{ root }}</code></template>
-        </p>
-        <div class="table-scroll">
-          <table class="vx-table">
-            <thead><tr><th>Reference</th><th>What it is</th></tr></thead>
-            <tbody>
-              <tr v-for="[ref, what] in REFERENCES" :key="ref">
-                <td><template v-for="(r, i) in ref!.split(', ')" :key="r"><template v-if="i">, </template><code>{{ r }}</code></template></td>
-                <td>{{ what }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <h3 id="bot-fields">Fields the bot supplies</h3>
-        <p>
-          Read-only, and always written with a <code>$</code>, so they never clash with a variable. A field with
-          nothing to show, like <code>$channel.title</code> while offline, counts as missing: give it a
-          <code>??</code> fallback.
-        </p>
-        <div class="table-scroll">
-          <table class="vx-table">
-            <thead><tr><th>Reference</th><th>What it holds</th></tr></thead>
-            <tbody>
-              <template v-for="(fields, root) in data.language.bot_field_docs" :key="root">
-                <tr class="root"><td colspan="2"><code>${{ root }}</code> · {{ data.language.bot_root_docs[root] }}</td></tr>
-                <tr v-for="(what, field) in fields" :key="`${root}.${field}`">
-                  <td><code>{${{ root }}.{{ field }}}</code></td>
-                  <td>{{ what }}</td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
-        </div>
-
-        <h2 id="events" class="vx-display">Events</h2>
-        <p>
-          A trigger runs when its event happens and reads what came with it from <code>{event.*}</code>
-          (<code>{event.type}</code> is always the trigger's type). Add one with
-          <Cmd t="event add raid echo welcome {event.user.name}!" :sign="p" />. The chatter,
-          <code>{$chatter.*}</code>, is the person named below; events with none leave it missing.
-        </p>
-        <section v-for="e in data.language.events" :key="e.type" class="event">
-          <h3 :id="`event-${e.type}`"><code>{{ e.type }}</code></h3>
+      <VxLoadState :error="error" :stale="!!data" :loading="!data" error-title="Couldn't load the language details" :error-text="errorText" :rows="6" row-height="28px" @retry="reload">
+        <template v-if="data">
+          <h2 class="vx-display">Operators</h2>
           <p>
-            Fires when {{ e.fires }}.
-            <template v-if="e.chatter"> The chatter is {{ e.chatter }}.</template>
-            <template v-if="e.needs"> Needs: {{ e.needs }}.</template>
-            <template v-if="e.match"> Narrow it with <code>{{ e.match }}</code>.</template>
+            These count as operators only when they stand alone between spaces, so ordinary chat like
+            <code>(lol)</code> or <code>a->b</code> is never mistaken for one.
           </p>
-          <div v-if="e.variables.length" class="table-scroll">
+          <p class="list">
+            <template v-for="(op, i) in data.language.operators.filter((o) => o !== ';')" :key="op"><template v-if="i"> · </template><code>{{ op }}</code></template>
+          </p>
+          <p><code>;</code> is reserved: it is rejected with a clear error.</p>
+
+          <h2 class="vx-display">Placeholders</h2>
+          <p>
+            <code>{reference}</code>, <code>{reference:type}</code>, <code>{reference ?? fallback}</code>, or an
+            expression such as <code>{channel.deaths + 1 > 10}</code>. A reference
+            that isn't available in the current context is an error before anything runs, and a missing value without a
+            <code>??</code> fallback stops the command.
+          </p>
+          <h3>Roots</h3>
+          <p class="list">
+            <template v-for="(root, i) in data.language.roots" :key="root"><template v-if="i"> · </template><code>{{ root }}</code></template>
+          </p>
+          <div class="table-scroll">
             <table class="vx-table">
-              <thead><tr><th>Variable</th><th>What it holds</th></tr></thead>
+              <thead><tr><th>Reference</th><th>What it is</th></tr></thead>
               <tbody>
-                <tr v-for="v in e.variables" :key="v.name">
-                  <td class="names"><code v-for="n in v.name.split(', ')" :key="n">{event.{{ n }}}</code></td>
-                  <td>{{ v.meaning }}</td>
+                <tr v-for="[ref, what] in REFERENCES" :key="ref">
+                  <td><template v-for="(r, i) in ref!.split(', ')" :key="r"><template v-if="i">, </template><code>{{ r }}</code></template></td>
+                  <td>{{ what }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
-        </section>
 
-        <h2 class="vx-display">Types</h2>
-        <p>
-          A placeholder can demand a type, and a bad value fails with usage text instead of running:
-          <code>{arg.1:int}</code>, <code>{arg.1:choice(rock,paper,scissors)}</code>.
-        </p>
-        <p class="list">
-          <template v-for="(type, i) in data.language.types" :key="type"><template v-if="i"> · </template><code>{{ type }}</code></template>
-        </p>
+          <h3 id="bot-fields">Fields the bot supplies</h3>
+          <p>
+            Read-only, and always written with a <code>$</code>, so they never clash with a variable. A field with
+            nothing to show, like <code>$channel.title</code> while offline, counts as missing: give it a
+            <code>??</code> fallback.
+          </p>
+          <div class="table-scroll">
+            <table class="vx-table">
+              <thead><tr><th>Reference</th><th>What it holds</th></tr></thead>
+              <tbody>
+                <template v-for="(fields, root) in data.language.bot_field_docs" :key="root">
+                  <tr class="root"><td colspan="2"><code>${{ root }}</code> · {{ data.language.bot_root_docs[root] }}</td></tr>
+                  <tr v-for="(what, field) in fields" :key="`${root}.${field}`">
+                    <td><code>{${{ root }}.{{ field }}}</code></td>
+                    <td>{{ what }}</td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
 
-        <h2 class="vx-display">Variables</h2>
-        <p class="list">
-          <template v-for="(ns, i) in data.language.variable_namespaces" :key="ns"><template v-if="i"> · </template><code>{{ ns }}.name</code></template>
-        </p>
-        <p>
-          Write with <code>-&gt;</code> (replace) or <code>--&gt;</code> (append), only when the command succeeded. Who may
-          write what is on the <RouterLink to="/docs/features#variables">features page</RouterLink>.
-        </p>
-      </template>
+          <h2 id="events" class="vx-display">Events</h2>
+          <p>
+            A trigger runs when its event happens and reads what came with it from <code>{event.*}</code>
+            (<code>{event.type}</code> is always the trigger's type). Add one with
+            <Cmd t="event add raid echo welcome {event.user.name}!" :sign="p" />. The chatter,
+            <code>{$chatter.*}</code>, is the person named below; events with none leave it missing.
+          </p>
+          <section v-for="e in data.language.events" :key="e.type" class="event">
+            <h3 :id="`event-${e.type}`"><code>{{ e.type }}</code></h3>
+            <p>
+              Fires when {{ e.fires }}.
+              <template v-if="e.chatter"> The chatter is {{ e.chatter }}.</template>
+              <template v-if="e.needs"> Needs: {{ e.needs }}.</template>
+              <template v-if="e.match"> Narrow it with <code>{{ e.match }}</code>.</template>
+            </p>
+            <div v-if="e.variables.length" class="table-scroll">
+              <table class="vx-table">
+                <thead><tr><th>Variable</th><th>What it holds</th></tr></thead>
+                <tbody>
+                  <tr v-for="v in e.variables" :key="v.name">
+                    <td class="names"><code v-for="n in v.name.split(', ')" :key="n">{event.{{ n }}}</code></td>
+                    <td>{{ v.meaning }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <h2 class="vx-display">Types</h2>
+          <p>
+            A placeholder can demand a type, and a bad value fails with usage text instead of running:
+            <code>{arg.1:int}</code>, <code>{arg.1:choice(rock,paper,scissors)}</code>.
+          </p>
+          <p class="list">
+            <template v-for="(type, i) in data.language.types" :key="type"><template v-if="i"> · </template><code>{{ type }}</code></template>
+          </p>
+
+          <h2 class="vx-display">Variables</h2>
+          <p class="list">
+            <template v-for="(ns, i) in data.language.variable_namespaces" :key="ns"><template v-if="i"> · </template><code>{{ ns }}.name</code></template>
+          </p>
+          <p>
+            Write with <code>-&gt;</code> (replace) or <code>--&gt;</code> (append), only when the command succeeded. Who may
+            write what is on the <RouterLink to="/docs/features#variables">features page</RouterLink>.
+          </p>
+        </template>
+      </VxLoadState>
 
       <h2 class="vx-display">Exit codes</h2>
       <div class="table-scroll">
@@ -259,7 +255,6 @@ const limits = computed(() => {
 .event h3 { margin-bottom: 4px; }
 /* One name a line, so the meaning stays beside it at phone width instead of scrolling away. */
 .names code { display: block; width: max-content; max-width: 100%; margin: 2px 0; }
-.loading { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
 
 /* The bot's editor, themed through its --dtb-* properties (doomtp-bot web-editor/README.md, "Theming"). */
 .editor {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Your own area, open to anyone signed in: your channel and the channels you run, the commands and packs you wrote,
 // what the bot keeps about you, your runs everywhere, and what you changed anywhere.
-import { VxButton, VxCallout, VxChip, VxSkeleton, VxTabs } from '@vex/ui'
+import { VxChip, VxLoadState, VxTabs } from '@vex/ui'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { AuditTable } from '@vex/platform-web/vue'
@@ -86,13 +86,10 @@ const moderated = computed(() =>
     <MyDataTab v-else-if="tab === 'runs'" show="runs" />
     <section v-else-if="tab === 'activity'">
       <p class="vx-muted">What you changed, in chat or here, in every channel.</p>
-      <VxCallout v-if="error" tone="error" title="Couldn't load your changes">
-        {{ errorText(error) }}
-        <template #actions><VxButton size="sm" @click="reload">Try again</VxButton></template>
-      </VxCallout>
-      <div v-else-if="!data" class="loading" aria-busy="true"><VxSkeleton v-for="i in 4" :key="i" h="38px" /></div>
-      <AuditTable v-else :entries="data" empty="Nothing changed yet.">
-      </AuditTable>
+      <VxLoadState :error="error" :stale="!!data" :loading="!data" error-title="Couldn't load your changes" :error-text="errorText" @retry="reload">
+        <AuditTable v-if="data" :entries="data" empty="Nothing changed yet.">
+        </AuditTable>
+      </VxLoadState>
     </section>
   </ManageShell>
 </template>
@@ -102,6 +99,5 @@ section { margin-bottom: 28px; }
 .sec { margin: 0 0 8px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chips .vx-chip { margin-left: 6px; }
-.loading { display: grid; gap: 6px; }
 .tabs { margin: 16px 0 14px; }
 </style>

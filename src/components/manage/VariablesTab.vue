@@ -4,7 +4,7 @@
 // keep here (`publisher.channel.*`, `publisher.channel.chatter.*`), with how much storage they use. Whoever reaches
 // the channel's "write channel variables" role sets and deletes `channel.*`; a chatter's value is cleared by them or
 // by the "manage variables" role, as `!var del … @user` does. Nobody edits someone else's.
-import { VxButton, VxCallout, VxDialog, VxEmptyState, VxField, VxInput, VxProgress, VxSelect, VxSkeleton, timeAgo } from '@vex/ui'
+import { VxButton, VxCallout, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxProgress, VxSelect, timeAgo } from '@vex/ui'
 import { computed, reactive, ref, watch } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { bytes, errorText } from '@vex/platform-web'
@@ -153,127 +153,132 @@ async function loadTop() {
 
 <template>
   <section class="mtab">
-    <VxCallout v-if="error" tone="error" title="Couldn't load the variables">
-      {{ errorText(error) }}
-      <template #actions><VxButton size="sm" @click="reload">Try again</VxButton></template>
-    </VxCallout>
-    <div v-else-if="!data" class="loading" aria-busy="true"><VxSkeleton v-for="i in 5" :key="i" h="38px" /></div>
-    <template v-else>
-      <div class="storage vx-panel">
-        <div class="meter">
-          <span>Storage</span>
-          <span class="vx-muted">{{ bytes(data.storage.used_bytes) }} of {{ bytes(data.storage.quota_bytes) }}</span>
+    <VxLoadState :error="error" :stale="!!data" :loading="!data" error-title="Couldn't load the variables" :error-text="errorText" :rows="5" @retry="reload">
+      <template v-if="data">
+        <div class="storage vx-panel">
+          <div class="meter">
+            <span>Storage</span>
+            <span class="vx-muted">{{ bytes(data.storage.used_bytes) }} of {{ bytes(data.storage.quota_bytes) }}</span>
+          </div>
+          <VxProgress :value="data.storage.used_bytes" :max="Math.max(1, data.storage.quota_bytes)" label="Storage used" />
+          <p class="vx-muted small limits">
+            Up to {{ bytes(data.storage.value_cap_bytes) }} a value, {{ data.storage.list_items }} items a list and
+            {{ data.storage.names_per_space }} names a namespace.
+            <template v-if="spaces.length"> By namespace: {{ spaces.map(([n, b]) => `${n} ${bytes(b)}`).join(' · ') }}.</template>
+          </p>
         </div>
-        <VxProgress :value="data.storage.used_bytes" :max="Math.max(1, data.storage.quota_bytes)" label="Storage used" />
-        <p class="vx-muted small limits">
-          Up to {{ bytes(data.storage.value_cap_bytes) }} a value, {{ data.storage.list_items }} items a list and
-          {{ data.storage.names_per_space }} names a namespace.
-          <template v-if="spaces.length"> By namespace: {{ spaces.map(([n, b]) => `${n} ${bytes(b)}`).join(' · ') }}.</template>
+
+        <div class="head">
+          <VxSelect v-model="view" :options="VIEWS.map(({ value, label }) => ({ value, label }))" aria-label="Which variables" width="240px" />
+          <VxButton v-if="view === 'channel' && mayWrite" size="sm" variant="primary" @click="openSet()">Set a variable</VxButton>
+        </div>
+        <p class="vx-muted intro small">
+          {{ viewText }} Everything here is public. <RouterLink to="/docs/features#variables">Who reads and writes each namespace</RouterLink>.
         </p>
-      </div>
 
-      <div class="head">
-        <VxSelect v-model="view" :options="VIEWS.map(({ value, label }) => ({ value, label }))" aria-label="Which variables" width="240px" />
-        <VxButton v-if="view === 'channel' && mayWrite" size="sm" variant="primary" @click="openSet()">Set a variable</VxButton>
-      </div>
-      <p class="vx-muted intro small">
-        {{ viewText }} Everything here is public. <RouterLink to="/docs/features#variables">Who reads and writes each namespace</RouterLink>.
-      </p>
+        <template v-if="view === 'channel'">
+          <p v-if="!mayWrite" class="vx-muted intro small">Setting them here takes {{ writeRole }} or higher.</p>
+          <VxEmptyState
+            v-if="!data.variables.length"
+            title="No channel variables yet"
+            text="Custom commands set them with -> channel.name, for whoever the channel's settings allow."
+          />
+          <template v-else>
+            <VxInput v-model="query" class="search" placeholder="Find a variable or value" aria-label="Find a variable" />
+            <div class="table-scroll vx-panel">
+              <table class="vx-table">
+                <thead><tr><th>Name</th><th>Value</th><th>Changed</th><th>By</th><th></th></tr></thead>
+                <tbody>
+                  <tr v-for="v in rows" :key="v.name">
+                    <td class="vx-mono nowrap">channel.{{ v.name }}</td>
+                    <td class="vx-mono wrap value">{{ shown(v.value) }}</td>
+                    <td class="vx-muted nowrap" :title="v.updated_at ? new Date(v.updated_at).toLocaleString() : undefined">{{ timeAgo(v.updated_at) }}</td>
+                    <td class="vx-muted vx-mono"><UserRef :id="v.updated_by" :login="v.updated_by_login" /></td>
+                    <td class="end">
+                      <template v-if="mayWrite">
+                        <VxButton size="sm" variant="ghost" @click="openSet(v)">Edit</VxButton>
+                        <VxButton size="sm" variant="ghost" @click="deleting = v.name">Delete</VxButton>
+                      </template>
+                    </td>
+                  </tr>
+                  <tr v-if="!rows.length"><td colspan="5" class="vx-muted">No variable matches “{{ query }}”.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
+        </template>
 
-      <template v-if="view === 'channel'">
-        <p v-if="!mayWrite" class="vx-muted intro small">Setting them here takes {{ writeRole }} or higher.</p>
-        <VxEmptyState
-          v-if="!data.variables.length"
-          title="No channel variables yet"
-          text="Custom commands set them with -> channel.name, for whoever the channel's settings allow."
-        />
-        <template v-else>
-          <VxInput v-model="query" class="search" placeholder="Find a variable or value" aria-label="Find a variable" />
-          <div class="table-scroll vx-panel">
+        <template v-else-if="view === 'top'">
+          <form class="filters vx-form-row" @submit.prevent="show">
+            <VxInput v-model="filter.name" mono class="grow" placeholder="points" aria-label="channel.chatter variable" />
+            <VxSelect v-model="count" :options="COUNTS" aria-label="How many" width="110px" />
+            <VxButton type="submit" :loading="top.loading" :disabled="!bare(filter.name)">Show</VxButton>
+          </form>
+          <VxCallout v-if="top.error" tone="error" title="Couldn't load the leaderboard">{{ errorText(top.error) }}</VxCallout>
+          <p v-else-if="top.rows === null" class="vx-muted small">Name a channel.chatter variable that holds numbers.</p>
+          <VxEmptyState v-else-if="!top.rows.length" title="Nobody has a number there yet" />
+          <div v-else class="table-scroll vx-panel">
             <table class="vx-table">
-              <thead><tr><th>Name</th><th>Value</th><th>Changed</th><th>By</th><th></th></tr></thead>
+              <thead><tr><th>#</th><th>Chatter</th><th>Value</th></tr></thead>
               <tbody>
-                <tr v-for="v in rows" :key="v.name">
-                  <td class="vx-mono nowrap">channel.{{ v.name }}</td>
-                  <td class="vx-mono wrap value">{{ shown(v.value) }}</td>
-                  <td class="vx-muted nowrap" :title="v.updated_at ? new Date(v.updated_at).toLocaleString() : undefined">{{ timeAgo(v.updated_at) }}</td>
-                  <td class="vx-muted vx-mono"><UserRef :id="v.updated_by" :login="v.updated_by_login" /></td>
-                  <td class="end">
-                    <template v-if="mayWrite">
-                      <VxButton size="sm" variant="ghost" @click="openSet(v)">Edit</VxButton>
-                      <VxButton size="sm" variant="ghost" @click="deleting = v.name">Delete</VxButton>
-                    </template>
-                  </td>
+                <tr v-for="r in top.rows" :key="r.chatter_id">
+                  <td class="vx-muted">{{ r.rank }}</td>
+                  <td class="vx-mono"><UserRef :id="r.chatter_id" :login="r.chatter_login" /></td>
+                  <td class="vx-mono">{{ shown(r.value) }}</td>
                 </tr>
-                <tr v-if="!rows.length"><td colspan="5" class="vx-muted">No variable matches “{{ query }}”.</td></tr>
               </tbody>
             </table>
           </div>
         </template>
-      </template>
 
-      <template v-else-if="view === 'top'">
-        <form class="filters vx-form-row" @submit.prevent="show">
-          <VxInput v-model="filter.name" mono class="grow" placeholder="points" aria-label="channel.chatter variable" />
-          <VxSelect v-model="count" :options="COUNTS" aria-label="How many" width="110px" />
-          <VxButton type="submit" :loading="top.loading" :disabled="!bare(filter.name)">Show</VxButton>
-        </form>
-        <VxCallout v-if="top.error" tone="error" title="Couldn't load the leaderboard">{{ errorText(top.error) }}</VxCallout>
-        <p v-else-if="top.rows === null" class="vx-muted small">Name a channel.chatter variable that holds numbers.</p>
-        <VxEmptyState v-else-if="!top.rows.length" title="Nobody has a number there yet" />
-        <div v-else class="table-scroll vx-panel">
-          <table class="vx-table">
-            <thead><tr><th>#</th><th>Chatter</th><th>Value</th></tr></thead>
-            <tbody>
-              <tr v-for="r in top.rows" :key="r.chatter_id">
-                <td class="vx-muted">{{ r.rank }}</td>
-                <td class="vx-mono"><UserRef :id="r.chatter_id" :login="r.chatter_login" /></td>
-                <td class="vx-mono">{{ shown(r.value) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </template>
-
-      <template v-else>
-        <form class="filters vx-form-row" @submit.prevent="show">
-          <VxInput v-model="filter.name" mono class="grow" placeholder="Variable name" aria-label="Variable name" />
-          <VxInput v-if="byCommand" v-model="filter.publisher" class="grow" placeholder="Command owner" aria-label="Command owner's login" />
-          <VxInput v-if="perChatter" v-model="filter.user" class="grow" placeholder="Chatter" aria-label="Chatter's login" />
-          <VxButton type="submit" :loading="other.loading">Show</VxButton>
-        </form>
-        <VxCallout v-if="other.error" tone="error" title="Couldn't load the variables">{{ errorText(other.error) }}</VxCallout>
-        <div v-else-if="other.loading && !other.rows.length" class="loading" aria-busy="true"><VxSkeleton v-for="i in 3" :key="i" h="38px" /></div>
-        <VxEmptyState v-else-if="!other.rows.length" title="Nothing here" text="Commands save these as chatters use them." />
         <template v-else>
-          <div class="table-scroll vx-panel">
-            <table class="vx-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th v-if="byCommand">Owner</th>
-                  <th v-if="perChatter">Chatter</th>
-                  <th>Value</th>
-                  <th>Changed</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(v, i) in other.rows" :key="`${v.publisher_id}:${v.chatter_id}:${v.name}:${i}`">
-                  <td class="vx-mono nowrap">{{ prefix(view) }}{{ v.name }}</td>
-                  <td v-if="byCommand" class="vx-mono"><UserRef :id="v.publisher_id" :login="v.publisher_login" /></td>
-                  <td v-if="perChatter" class="vx-mono"><UserRef :id="v.chatter_id" :login="v.chatter_login" /></td>
-                  <td class="vx-mono wrap value">{{ shown(v.value) }}</td>
-                  <td class="vx-muted nowrap" :title="v.updated_at ? new Date(v.updated_at).toLocaleString() : undefined">{{ timeAgo(v.updated_at) }}</td>
-                  <td class="end"><VxButton v-if="mayClear(v)" size="sm" variant="ghost" @click="clearing = v">Clear</VxButton></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <VxButton v-if="other.more" class="more" :loading="other.loading" @click="loadOther(true)">Load more</VxButton>
+          <form class="filters vx-form-row" @submit.prevent="show">
+            <VxInput v-model="filter.name" mono class="grow" placeholder="Variable name" aria-label="Variable name" />
+            <VxInput v-if="byCommand" v-model="filter.publisher" class="grow" placeholder="Command owner" aria-label="Command owner's login" />
+            <VxInput v-if="perChatter" v-model="filter.user" class="grow" placeholder="Chatter" aria-label="Chatter's login" />
+            <VxButton type="submit" :loading="other.loading">Show</VxButton>
+          </form>
+          <VxLoadState
+            :error="other.error"
+            :stale="!!other.rows.length"
+            :loading="other.loading && !other.rows.length"
+            :empty="!other.rows.length"
+            error-title="Couldn't load the variables"
+            :error-text="errorText"
+            :rows="3"
+            empty-title="Nothing here"
+            empty-text="Commands save these as chatters use them."
+            @retry="loadOther()"
+          >
+            <div class="table-scroll vx-panel">
+              <table class="vx-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th v-if="byCommand">Owner</th>
+                    <th v-if="perChatter">Chatter</th>
+                    <th>Value</th>
+                    <th>Changed</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(v, i) in other.rows" :key="`${v.publisher_id}:${v.chatter_id}:${v.name}:${i}`">
+                    <td class="vx-mono nowrap">{{ prefix(view) }}{{ v.name }}</td>
+                    <td v-if="byCommand" class="vx-mono"><UserRef :id="v.publisher_id" :login="v.publisher_login" /></td>
+                    <td v-if="perChatter" class="vx-mono"><UserRef :id="v.chatter_id" :login="v.chatter_login" /></td>
+                    <td class="vx-mono wrap value">{{ shown(v.value) }}</td>
+                    <td class="vx-muted nowrap" :title="v.updated_at ? new Date(v.updated_at).toLocaleString() : undefined">{{ timeAgo(v.updated_at) }}</td>
+                    <td class="end"><VxButton v-if="mayClear(v)" size="sm" variant="ghost" @click="clearing = v">Clear</VxButton></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <VxButton v-if="other.more" class="more" :loading="other.loading" @click="loadOther(true)">Load more</VxButton>
+          </VxLoadState>
         </template>
       </template>
-    </template>
+    </VxLoadState>
 
     <VxDialog v-model:open="draft.open" :title="draft.existing ? `channel.${draft.name}` : 'Set a channel variable'">
       <form id="var-form" class="dialog-form" @submit.prevent="save">

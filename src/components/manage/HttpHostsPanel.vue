@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The hosts `http get` may fetch (ADR-0020), the same as `admin http` in chat: allow and remove them, attach a
 // secret the bot adds to each request (its value goes in and never comes back), and the rate limits.
-import { VxButton, VxCallout, VxCheckbox, VxChip, VxDialog, VxField, VxInput, VxRadioGroup, VxSkeleton, timeAgo } from '@vex/ui'
+import { VxButton, VxCheckbox, VxChip, VxDialog, VxField, VxInput, VxLoadState, VxRadioGroup, timeAgo } from '@vex/ui'
 import { computed, reactive, ref, watch } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -65,55 +65,52 @@ const saveLimits = () => act('limits', () => admin.setHttpLimits(limitsPatch.val
 
 <template>
   <div class="mtab">
-    <VxCallout v-if="error" tone="error" title="Couldn't load the HTTP hosts">
-      {{ errorText(error) }}
-      <template #actions><VxButton size="sm" @click="reload">Try again</VxButton></template>
-    </VxCallout>
-    <div v-else-if="!data" class="loading" aria-busy="true"><VxSkeleton v-for="i in 3" :key="i" h="38px" /></div>
-    <template v-else>
-      <div class="table-scroll vx-panel">
-        <table class="vx-table">
-          <thead><tr><th>Host</th><th>Scheme</th><th>Secret</th><th>Added</th><th></th></tr></thead>
-          <tbody>
-            <tr v-for="h in data.hosts" :key="h.pattern">
-              <td class="vx-mono wrap">{{ h.pattern }}</td>
-              <td><VxChip :tone="h.plain_http ? 'warn' : 'default'">{{ h.plain_http ? 'http too' : 'https' }}</VxChip></td>
-              <td>
-                <span v-if="h.secret" class="vx-mono">{{ h.secret.kind }} {{ h.secret.name }}</span>
-                <span v-else class="vx-muted">none</span>
-              </td>
-              <td class="vx-muted nowrap" :title="h.added_at ? new Date(h.added_at).toLocaleString() : undefined">
-                {{ timeAgo(h.added_at) }}<template v-if="h.added_by"> · {{ h.added_by }}</template>
-              </td>
-              <td class="end">
-                <VxButton size="sm" variant="ghost" @click="editSecret(h)">{{ h.secret ? 'Replace secret' : 'Add secret' }}</VxButton>
-                <VxButton v-if="h.secret" size="sm" variant="ghost" :loading="busy.has(`clear:${h.pattern}`)" @click="clearSecret(h)">Remove secret</VxButton>
-                <VxButton size="sm" variant="danger" @click="removing = h">Remove</VxButton>
-              </td>
-            </tr>
-            <tr v-if="!data.hosts.length"><td colspan="5" class="vx-muted">No hosts yet: <code>http get</code> can't fetch anything.</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <form class="add vx-form-row vx-panel" @submit.prevent="allow">
-        <VxField label="Host" class="grow" help="A name like api.example.com, or *.example.com for its subdomains.">
-          <template #default="{ id }"><VxInput :id="id" v-model="adding.pattern" mono placeholder="api.example.com" /></template>
-        </VxField>
-        <VxCheckbox v-model="adding.plainHttp" label="Allow plain http" />
-        <VxButton type="submit" variant="primary" :loading="busy.has('allow')" :disabled="!adding.pattern.trim()">Allow</VxButton>
-      </form>
+    <VxLoadState :error="error" :stale="!!data" :loading="!data" error-title="Couldn't load the HTTP hosts" :error-text="errorText" :rows="3" @retry="reload">
+      <template v-if="data">
+        <div class="table-scroll vx-panel">
+          <table class="vx-table">
+            <thead><tr><th>Host</th><th>Scheme</th><th>Secret</th><th>Added</th><th></th></tr></thead>
+            <tbody>
+              <tr v-for="h in data.hosts" :key="h.pattern">
+                <td class="vx-mono wrap">{{ h.pattern }}</td>
+                <td><VxChip :tone="h.plain_http ? 'warn' : 'default'">{{ h.plain_http ? 'http too' : 'https' }}</VxChip></td>
+                <td>
+                  <span v-if="h.secret" class="vx-mono">{{ h.secret.kind }} {{ h.secret.name }}</span>
+                  <span v-else class="vx-muted">none</span>
+                </td>
+                <td class="vx-muted nowrap" :title="h.added_at ? new Date(h.added_at).toLocaleString() : undefined">
+                  {{ timeAgo(h.added_at) }}<template v-if="h.added_by"> · {{ h.added_by }}</template>
+                </td>
+                <td class="end">
+                  <VxButton size="sm" variant="ghost" @click="editSecret(h)">{{ h.secret ? 'Replace secret' : 'Add secret' }}</VxButton>
+                  <VxButton v-if="h.secret" size="sm" variant="ghost" :loading="busy.has(`clear:${h.pattern}`)" @click="clearSecret(h)">Remove secret</VxButton>
+                  <VxButton size="sm" variant="danger" @click="removing = h">Remove</VxButton>
+                </td>
+              </tr>
+              <tr v-if="!data.hosts.length"><td colspan="5" class="vx-muted">No hosts yet: <code>http get</code> can't fetch anything.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <form class="add vx-form-row vx-panel" @submit.prevent="allow">
+          <VxField label="Host" class="grow" help="A name like api.example.com, or *.example.com for its subdomains.">
+            <template #default="{ id }"><VxInput :id="id" v-model="adding.pattern" mono placeholder="api.example.com" /></template>
+          </VxField>
+          <VxCheckbox v-model="adding.plainHttp" label="Allow plain http" />
+          <VxButton type="submit" variant="primary" :loading="busy.has('allow')" :disabled="!adding.pattern.trim()">Allow</VxButton>
+        </form>
 
-      <h3 class="vx-eyebrow sub">Rate limits</h3>
-      <form class="add vx-form-row vx-panel" @submit.prevent="saveLimits">
-        <VxField label="Requests a minute, per channel">
-          <template #default="{ id }"><VxInput :id="id" v-model="limits.channel_per_minute" type="number" mono /></template>
-        </VxField>
-        <VxField label="Requests a minute, per host">
-          <template #default="{ id }"><VxInput :id="id" v-model="limits.host_per_minute" type="number" mono /></template>
-        </VxField>
-        <VxButton type="submit" variant="primary" :loading="busy.has('limits')" :disabled="!Object.keys(limitsPatch).length">Save limits</VxButton>
-      </form>
-    </template>
+        <h3 class="vx-eyebrow sub">Rate limits</h3>
+        <form class="add vx-form-row vx-panel" @submit.prevent="saveLimits">
+          <VxField label="Requests a minute, per channel">
+            <template #default="{ id }"><VxInput :id="id" v-model="limits.channel_per_minute" type="number" mono /></template>
+          </VxField>
+          <VxField label="Requests a minute, per host">
+            <template #default="{ id }"><VxInput :id="id" v-model="limits.host_per_minute" type="number" mono /></template>
+          </VxField>
+          <VxButton type="submit" variant="primary" :loading="busy.has('limits')" :disabled="!Object.keys(limitsPatch).length">Save limits</VxButton>
+        </form>
+      </template>
+    </VxLoadState>
 
     <VxDialog :open="secretFor !== null" :title="`Secret for ${secretFor?.pattern ?? ''}`" @update:open="(v: boolean) => { if (!v) secretFor = null }">
       <form id="host-secret" class="dialog-form" @submit.prevent="saveSecret">

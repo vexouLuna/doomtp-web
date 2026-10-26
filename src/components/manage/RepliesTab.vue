@@ -2,7 +2,7 @@
 // What the bot says instead of staying quiet: a reply when a command is on cooldown or someone may not run it
 // (`callback`), and the channel's own wording for the readout commands (`customecho`). A reply is an expression,
 // set for the whole channel, one module or one command; a readout is a template.
-import { VxButton, VxCallout, VxDialog, VxEmptyState, VxField, VxInput, VxSegmented, VxSelect, VxSkeleton } from '@vex/ui'
+import { VxButton, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxSegmented, VxSelect } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -59,78 +59,75 @@ async function saveEcho() {
 
 <template>
   <section class="mtab">
-    <VxCallout v-if="error" tone="error" title="Couldn't load the replies">
-      {{ errorText(error) }}
-      <template #actions><VxButton size="sm" @click="reload">Try again</VxButton></template>
-    </VxCallout>
-    <div v-else-if="!data" class="loading" aria-busy="true"><VxSkeleton v-for="i in 4" :key="i" h="38px" /></div>
-    <template v-else>
-      <div class="head">
-        <h2 class="vx-eyebrow sub">Replies</h2>
-        <VxButton v-if="mayEdit" size="sm" variant="primary" @click="openReply()">New reply</VxButton>
-      </div>
-      <p class="vx-muted intro">
-        What the bot says when a command is on cooldown or someone may not run it, instead of staying quiet. The most
-        specific one wins: a command's, then its module's, then the channel's. The same as
-        <ChatLine :lines="`${sign}callback on_cooldown <expression>`" :sign="sign" /> in chat.
-      </p>
-      <VxEmptyState v-if="!data.callbacks.length" title="No replies" text="The bot stays quiet on cooldowns and refusals." />
-      <div v-else class="table-scroll vx-panel">
-        <table class="vx-table">
-          <thead><tr><th>When</th><th>For</th><th>Says</th><th></th></tr></thead>
-          <tbody>
-            <tr v-for="c in data.callbacks" :key="`${c.kind}/${c.scope}`">
-              <td class="nowrap">{{ KIND_LABEL[c.kind] ?? c.kind }}</td>
-              <td class="vx-mono nowrap">{{ where(c.scope) }}</td>
-              <td class="wrap"><ChatLine :lines="c.expr" :sign="sign" context="body" /></td>
-              <td class="end">
-                <template v-if="mayEdit">
-                  <VxButton size="sm" variant="ghost" @click="openReply(c)">Edit</VxButton>
-                  <VxButton
-                    size="sm"
-                    variant="ghost"
-                    :loading="busy.has(`cb:${c.kind}/${c.scope}`)"
-                    @click="act(`cb:${c.kind}/${c.scope}`, () => admin.deleteCallback(login, c.kind, c.scope), 'Reply removed')"
-                  >Remove</VxButton>
-                </template>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <VxLoadState :error="error" :stale="!!data" :loading="!data" error-title="Couldn't load the replies" :error-text="errorText" @retry="reload">
+      <template v-if="data">
+        <div class="head">
+          <h2 class="vx-eyebrow sub">Replies</h2>
+          <VxButton v-if="mayEdit" size="sm" variant="primary" @click="openReply()">New reply</VxButton>
+        </div>
+        <p class="vx-muted intro">
+          What the bot says when a command is on cooldown or someone may not run it, instead of staying quiet. The most
+          specific one wins: a command's, then its module's, then the channel's. The same as
+          <ChatLine :lines="`${sign}callback on_cooldown <expression>`" :sign="sign" /> in chat.
+        </p>
+        <VxEmptyState v-if="!data.callbacks.length" title="No replies" text="The bot stays quiet on cooldowns and refusals." />
+        <div v-else class="table-scroll vx-panel">
+          <table class="vx-table">
+            <thead><tr><th>When</th><th>For</th><th>Says</th><th></th></tr></thead>
+            <tbody>
+              <tr v-for="c in data.callbacks" :key="`${c.kind}/${c.scope}`">
+                <td class="nowrap">{{ KIND_LABEL[c.kind] ?? c.kind }}</td>
+                <td class="vx-mono nowrap">{{ where(c.scope) }}</td>
+                <td class="wrap"><ChatLine :lines="c.expr" :sign="sign" context="body" /></td>
+                <td class="end">
+                  <template v-if="mayEdit">
+                    <VxButton size="sm" variant="ghost" @click="openReply(c)">Edit</VxButton>
+                    <VxButton
+                      size="sm"
+                      variant="ghost"
+                      :loading="busy.has(`cb:${c.kind}/${c.scope}`)"
+                      @click="act(`cb:${c.kind}/${c.scope}`, () => admin.deleteCallback(login, c.kind, c.scope), 'Reply removed')"
+                    >Remove</VxButton>
+                  </template>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <div class="head">
-        <h2 class="vx-eyebrow sub">Readouts</h2>
-        <VxButton v-if="mayEdit" size="sm" variant="primary" @click="openEcho()">New wording</VxButton>
-      </div>
-      <p class="vx-muted intro">
-        This channel's own wording for commands that read something out (a count, a time, a quote), as a template. The
-        same as <ChatLine :lines="`${sign}customecho <command> <template>`" :sign="sign" /> in chat.
-      </p>
-      <VxEmptyState v-if="!data.echo.length" title="No custom wording" text="Readouts use their built-in wording." />
-      <div v-else class="table-scroll vx-panel">
-        <table class="vx-table">
-          <thead><tr><th>Command</th><th>Template</th><th></th></tr></thead>
-          <tbody>
-            <tr v-for="e in data.echo" :key="e.command">
-              <td class="nowrap"><ChatLine :lines="`${sign}${e.command}`" :sign="sign" /></td>
-              <td class="vx-mono wrap">{{ e.template }}</td>
-              <td class="end">
-                <template v-if="mayEdit">
-                  <VxButton size="sm" variant="ghost" @click="openEcho(e)">Edit</VxButton>
-                  <VxButton
-                    size="sm"
-                    variant="ghost"
-                    :loading="busy.has(`ce:${e.command}`)"
-                    @click="act(`ce:${e.command}`, () => admin.deleteCustomecho(login, e.command), `${sign}${e.command} back to its own wording`)"
-                  >Remove</VxButton>
-                </template>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </template>
+        <div class="head">
+          <h2 class="vx-eyebrow sub">Readouts</h2>
+          <VxButton v-if="mayEdit" size="sm" variant="primary" @click="openEcho()">New wording</VxButton>
+        </div>
+        <p class="vx-muted intro">
+          This channel's own wording for commands that read something out (a count, a time, a quote), as a template. The
+          same as <ChatLine :lines="`${sign}customecho <command> <template>`" :sign="sign" /> in chat.
+        </p>
+        <VxEmptyState v-if="!data.echo.length" title="No custom wording" text="Readouts use their built-in wording." />
+        <div v-else class="table-scroll vx-panel">
+          <table class="vx-table">
+            <thead><tr><th>Command</th><th>Template</th><th></th></tr></thead>
+            <tbody>
+              <tr v-for="e in data.echo" :key="e.command">
+                <td class="nowrap"><ChatLine :lines="`${sign}${e.command}`" :sign="sign" /></td>
+                <td class="vx-mono wrap">{{ e.template }}</td>
+                <td class="end">
+                  <template v-if="mayEdit">
+                    <VxButton size="sm" variant="ghost" @click="openEcho(e)">Edit</VxButton>
+                    <VxButton
+                      size="sm"
+                      variant="ghost"
+                      :loading="busy.has(`ce:${e.command}`)"
+                      @click="act(`ce:${e.command}`, () => admin.deleteCustomecho(login, e.command), `${sign}${e.command} back to its own wording`)"
+                    >Remove</VxButton>
+                  </template>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
+    </VxLoadState>
 
     <VxDialog v-model:open="reply.open" :title="reply.existing ? 'Edit reply' : 'New reply'" width="560px">
       <form id="reply-form" class="dialog-form" @submit.prevent="saveReply">

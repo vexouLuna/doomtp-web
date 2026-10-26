@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { VxButton, VxCallout, VxSkeleton } from '@vex/ui'
+import { VxLoadState } from '@vex/ui'
 import { computed } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -23,21 +23,17 @@ const status = computed(() => statusOf(error.value))
           <RouterLink to="/docs/language#try">language page's editor</RouterLink>.
         </p>
       </template>
-      <VxCallout v-else-if="error" tone="error" title="Couldn't load the report">
-        {{ errorText(error) }}
-        <template #actions><VxButton size="sm" @click="reload">Try again</VxButton></template>
-      </VxCallout>
-      <div v-else-if="!report" class="loading" aria-busy="true"><VxSkeleton v-for="i in 4" :key="i" h="38px" /></div>
-      <template v-else>
-        <ExplainReport :report="report" />
-        <p class="vx-muted note">The report is checked against the rank of whoever asked, and kept for an hour.</p>
-      </template>
+      <VxLoadState v-else :error="error" :stale="!!report" :loading="!report" error-title="Couldn't load the report" :error-text="errorText" @retry="reload">
+        <template v-if="report">
+          <ExplainReport :report="report" />
+          <p class="vx-muted note">The report is checked against the rank of whoever asked, and kept for an hour.</p>
+        </template>
+      </VxLoadState>
     </div>
   </DtpShell>
 </template>
 
 <style scoped>
 .doc { max-width: none; }
-.loading { display: flex; flex-direction: column; gap: 8px; }
 .note { margin-top: 18px; }
 </style>

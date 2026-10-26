@@ -2,7 +2,7 @@
 // What the bot keeps about you: your variables (`chatter.*` everywhere, `channel.chatter.*` per channel, and your
 // commands' `publisher.*`) with your storage use, or your runs in every channel, newest first. As in chat, you set
 // and delete your own `chatter.*` (`!var set|del chatter.x`) and clear your own `channel.chatter.*` values.
-import { VxButton, VxCallout, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxSegmented, VxSkeleton, timeAgo } from '@vex/ui'
+import { VxButton, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxSegmented, timeAgo } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { bytes, errorText } from '@vex/platform-web'
@@ -71,66 +71,62 @@ const outcome = (r: MyRun): { label: string; tone: 'ok' | 'bad' | 'warn' } =>
       <VxSegmented v-if="show === 'runs'" v-model="limit" :options="LIMITS" label="How many runs" />
       <VxButton :loading="loading" @click="reload">Refresh</VxButton>
     </div>
-    <VxCallout v-if="error" tone="error" :title="`Couldn't load your ${show}`">
-      {{ errorText(error) }}
-      <template #actions><VxButton size="sm" @click="reload">Try again</VxButton></template>
-    </VxCallout>
-    <div v-else-if="!data" class="loading" aria-busy="true"><VxSkeleton v-for="i in 5" :key="i" h="38px" /></div>
-
-    <template v-else-if="show === 'variables'">
-      <div class="head">
-        <p class="vx-muted intro">
-          Yours everywhere (<code>chatter.*</code>), yours in one channel (<code>channel.chatter.*</code>), and what your
-          commands keep (<code>publisher.*</code>). Commands write them as they run. Anyone can read them, so keep
-          nothing private here.
+    <VxLoadState :error="error" :stale="!!data" :loading="!data" :error-title="`Couldn't load your ${show}`" :error-text="errorText" :rows="5" @retry="reload">
+      <template v-if="data && show === 'variables'">
+        <div class="head">
+          <p class="vx-muted intro">
+            Yours everywhere (<code>chatter.*</code>), yours in one channel (<code>channel.chatter.*</code>), and what your
+            commands keep (<code>publisher.*</code>). Commands write them as they run. Anyone can read them, so keep
+            nothing private here.
+          </p>
+          <VxButton size="sm" variant="primary" @click="openSet()">Set a variable</VxButton>
+        </div>
+        <p v-if="data.storage" class="vx-muted small">
+          Storage: {{ usage('yours', data.storage.chatter) }} · {{ usage('your commands', data.storage.publisher) }}.
         </p>
-        <VxButton size="sm" variant="primary" @click="openSet()">Set a variable</VxButton>
-      </div>
-      <p v-if="data.storage" class="vx-muted small">
-        Storage: {{ usage('yours', data.storage.chatter) }} · {{ usage('your commands', data.storage.publisher) }}.
-      </p>
-      <VxEmptyState v-if="!data.variables?.length" title="No variables yet" text="They appear once a command saves something for you." />
-      <div v-else class="table-scroll vx-panel">
-        <table class="vx-table">
-          <thead><tr><th>Name</th><th>Where</th><th>Value</th><th>Changed</th><th></th></tr></thead>
-          <tbody>
-            <tr v-for="(v, i) in variables" :key="`${fullName(v)}:${v.channel}:${i}`">
-              <td class="vx-mono nowrap">{{ fullName(v) }}</td>
-              <td class="vx-muted">{{ v.channel ? `#${v.channel}` : 'everywhere' }}</td>
-              <td class="vx-mono wrap value">{{ shown(v.value) }}</td>
-              <td class="vx-muted nowrap" :title="v.updated_at ? new Date(v.updated_at).toLocaleString() : undefined">{{ timeAgo(v.updated_at) }}</td>
-              <td class="end">
-                <VxButton v-if="v.namespace === 'chatter'" size="sm" variant="ghost" @click="openSet(v)">Edit</VxButton>
-                <VxButton v-if="deletable(v)" size="sm" variant="ghost" @click="deleting = v">Delete</VxButton>
-              </td>
-            </tr>
-            <tr v-if="!variables.length"><td colspan="5" class="vx-muted">Nothing matches “{{ query }}”.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </template>
+        <VxEmptyState v-if="!data.variables?.length" title="No variables yet" text="They appear once a command saves something for you." />
+        <div v-else class="table-scroll vx-panel">
+          <table class="vx-table">
+            <thead><tr><th>Name</th><th>Where</th><th>Value</th><th>Changed</th><th></th></tr></thead>
+            <tbody>
+              <tr v-for="(v, i) in variables" :key="`${fullName(v)}:${v.channel}:${i}`">
+                <td class="vx-mono nowrap">{{ fullName(v) }}</td>
+                <td class="vx-muted">{{ v.channel ? `#${v.channel}` : 'everywhere' }}</td>
+                <td class="vx-mono wrap value">{{ shown(v.value) }}</td>
+                <td class="vx-muted nowrap" :title="v.updated_at ? new Date(v.updated_at).toLocaleString() : undefined">{{ timeAgo(v.updated_at) }}</td>
+                <td class="end">
+                  <VxButton v-if="v.namespace === 'chatter'" size="sm" variant="ghost" @click="openSet(v)">Edit</VxButton>
+                  <VxButton v-if="deletable(v)" size="sm" variant="ghost" @click="deleting = v">Delete</VxButton>
+                </td>
+              </tr>
+              <tr v-if="!variables.length"><td colspan="5" class="vx-muted">Nothing matches “{{ query }}”.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
 
-    <template v-else>
-      <VxEmptyState v-if="!data.runs?.length" title="Nothing ran for you yet" text="Commands you run in chat show up here, in every channel." />
-      <div v-else class="table-scroll vx-panel">
-        <table class="vx-table">
-          <thead><tr><th>When</th><th>Channel</th><th>Expression</th><th>Outcome</th><th>Took</th></tr></thead>
-          <tbody>
-            <tr v-for="(r, i) in runs" :key="`${r.at}-${i}`">
-              <td class="vx-muted nowrap" :title="new Date(r.at).toLocaleString()">{{ timeAgo(r.at) }}</td>
-              <td class="vx-mono">#{{ r.channel ?? r.channel_id }}</td>
-              <td class="wrap"><ChatLine :lines="r.expr" sign="!" context="body" /></td>
-              <td class="wrap">
-                <VxChip :tone="outcome(r).tone">{{ outcome(r).label }}</VxChip>
-                <div v-if="r.message" class="vx-muted small">{{ r.message }}</div>
-              </td>
-              <td class="vx-muted nowrap">{{ r.duration_ms === null ? '' : `${r.duration_ms} ms` }}</td>
-            </tr>
-            <tr v-if="!runs.length"><td colspan="5" class="vx-muted">No run matches “{{ query }}”.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </template>
+      <template v-else-if="data">
+        <VxEmptyState v-if="!data.runs?.length" title="Nothing ran for you yet" text="Commands you run in chat show up here, in every channel." />
+        <div v-else class="table-scroll vx-panel">
+          <table class="vx-table">
+            <thead><tr><th>When</th><th>Channel</th><th>Expression</th><th>Outcome</th><th>Took</th></tr></thead>
+            <tbody>
+              <tr v-for="(r, i) in runs" :key="`${r.at}-${i}`">
+                <td class="vx-muted nowrap" :title="new Date(r.at).toLocaleString()">{{ timeAgo(r.at) }}</td>
+                <td class="vx-mono">#{{ r.channel ?? r.channel_id }}</td>
+                <td class="wrap"><ChatLine :lines="r.expr" sign="!" context="body" /></td>
+                <td class="wrap">
+                  <VxChip :tone="outcome(r).tone">{{ outcome(r).label }}</VxChip>
+                  <div v-if="r.message" class="vx-muted small">{{ r.message }}</div>
+                </td>
+                <td class="vx-muted nowrap">{{ r.duration_ms === null ? '' : `${r.duration_ms} ms` }}</td>
+              </tr>
+              <tr v-if="!runs.length"><td colspan="5" class="vx-muted">No run matches “{{ query }}”.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
+    </VxLoadState>
 
     <VxDialog v-model:open="draft.open" :title="draft.existing ? `chatter.${draft.name}` : 'Set one of your variables'">
       <form id="me-var-form" class="dialog-form" @submit.prevent="save">

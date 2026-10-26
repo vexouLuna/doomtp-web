@@ -2,7 +2,7 @@
 // A channel's custom roles and who holds them, as `role` manages them in chat: a role ranks between the built-in
 // ones, commands can require it, and a member can hold it for a while or until removed. The bot decides what the
 // session may touch (`manageable`): roles ranked below its own, any of them for the broadcaster.
-import { VxButton, VxCallout, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxSelect, VxSkeleton, VxStepper, timeAgo } from '@vex/ui'
+import { VxButton, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxLoadState, VxSelect, VxStepper, timeAgo } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -62,62 +62,59 @@ const expires = (at: number | null) => (at ? `until ${new Date(at).toLocaleStrin
 
 <template>
   <section class="mtab">
-    <VxCallout v-if="error" tone="error" title="Couldn't load the roles">
-      {{ errorText(error) }}
-      <template #actions><VxButton size="sm" @click="reload">Try again</VxButton></template>
-    </VxCallout>
-    <div v-else-if="!data" class="loading" aria-busy="true"><VxSkeleton v-for="i in 4" :key="i" h="38px" /></div>
-    <template v-else>
-      <p class="vx-muted intro">
-        Custom roles rank between the built-in ones, so a command can require one. The same as <code>{{ sign }}role</code>
-        in chat. Your rank here is {{ data.your_rank }}.
-      </p>
-      <p class="vx-muted small ladder">
-        <template v-for="(r, i) in ranked" :key="r.name"><template v-if="i"> · </template><span :class="{ custom: !r.builtin }">{{ r.name }} {{ r.rank }}</span></template>
-      </p>
+    <VxLoadState :error="error" :stale="!!data" :loading="!data" error-title="Couldn't load the roles" :error-text="errorText" @retry="reload">
+      <template v-if="data">
+        <p class="vx-muted intro">
+          Custom roles rank between the built-in ones, so a command can require one. The same as <code>{{ sign }}role</code>
+          in chat. Your rank here is {{ data.your_rank }}.
+        </p>
+        <p class="vx-muted small ladder">
+          <template v-for="(r, i) in ranked" :key="r.name"><template v-if="i"> · </template><span :class="{ custom: !r.builtin }">{{ r.name }} {{ r.rank }}</span></template>
+        </p>
 
-      <VxEmptyState v-if="!data.roles.length" title="No custom roles" :text="mayEdit ? 'Create one below.' : undefined" />
-      <div v-for="r in data.roles" :key="r.name" class="role vx-panel">
-        <div class="role-head">
-          <span class="vx-mono name">{{ r.name }}</span>
-          <VxChip k="rank">{{ r.rank }}</VxChip>
-          <VxChip v-if="r.global">bot-wide</VxChip>
-          <span class="grow"></span>
-          <template v-if="r.manageable">
-            <VxButton size="sm" @click="openGive(r.name)">Give to someone</VxButton>
-            <VxButton v-if="!r.global" size="sm" variant="ghost" @click="deleting = r.name">Delete</VxButton>
-          </template>
+        <VxEmptyState v-if="!data.roles.length" title="No custom roles" :text="mayEdit ? 'Create one below.' : undefined" />
+        <div v-for="r in data.roles" :key="r.name" class="role vx-panel">
+          <div class="role-head">
+            <span class="vx-mono name">{{ r.name }}</span>
+            <VxChip k="rank">{{ r.rank }}</VxChip>
+            <VxChip v-if="r.global">bot-wide</VxChip>
+            <span class="grow"></span>
+            <template v-if="r.manageable">
+              <VxButton size="sm" @click="openGive(r.name)">Give to someone</VxButton>
+              <VxButton v-if="!r.global" size="sm" variant="ghost" @click="deleting = r.name">Delete</VxButton>
+            </template>
+          </div>
+          <table v-if="r.members.length" class="vx-table members">
+            <tbody>
+              <tr v-for="m in r.members" :key="m.user_id">
+                <td class="vx-mono"><UserRef :id="m.user_id" :login="m.login" /></td>
+                <td class="vx-muted small" :title="expires(m.expires_at)">{{ m.expires_at ? `ends ${timeAgo(m.expires_at)}` : 'until removed' }}</td>
+                <td class="end">
+                  <VxButton
+                    v-if="r.manageable"
+                    size="sm"
+                    variant="ghost"
+                    :loading="busy.has(`m:${r.name}:${m.user_id}`)"
+                    @click="act(`m:${r.name}:${m.user_id}`, () => admin.revokeRole(login, r.name, m.login ?? m.user_id), `Took ${r.name} from @${m.login ?? m.user_id}`)"
+                  >Remove</VxButton>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-else class="vx-muted small none">Nobody holds it.</p>
         </div>
-        <table v-if="r.members.length" class="vx-table members">
-          <tbody>
-            <tr v-for="m in r.members" :key="m.user_id">
-              <td class="vx-mono"><UserRef :id="m.user_id" :login="m.login" /></td>
-              <td class="vx-muted small" :title="expires(m.expires_at)">{{ m.expires_at ? `ends ${timeAgo(m.expires_at)}` : 'until removed' }}</td>
-              <td class="end">
-                <VxButton
-                  v-if="r.manageable"
-                  size="sm"
-                  variant="ghost"
-                  :loading="busy.has(`m:${r.name}:${m.user_id}`)"
-                  @click="act(`m:${r.name}:${m.user_id}`, () => admin.revokeRole(login, r.name, m.login ?? m.user_id), `Took ${r.name} from @${m.login ?? m.user_id}`)"
-                >Remove</VxButton>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <p v-else class="vx-muted small none">Nobody holds it.</p>
-      </div>
 
-      <form v-if="mayEdit" class="add vx-form-row vx-panel" @submit.prevent="create">
-        <VxField label="New role" help="Lowercase letters, digits and _.">
-          <template #default="{ id }"><VxInput :id="id" v-model="role.name" mono placeholder="regular" :invalid="!!role.name && !validName" /></template>
-        </VxField>
-        <VxField label="Rank" :help="`${data.range[0]} to ${rankMax}: below your own.`">
-          <template #default="{ id }"><VxStepper :id="id" v-model="role.rank" :min="data.range[0]" :max="rankMax" :step="5" /></template>
-        </VxField>
-        <VxButton type="submit" variant="primary" :loading="busy.has('r-add')" :disabled="!validName">Create</VxButton>
-      </form>
-    </template>
+        <form v-if="mayEdit" class="add vx-form-row vx-panel" @submit.prevent="create">
+          <VxField label="New role" help="Lowercase letters, digits and _.">
+            <template #default="{ id }"><VxInput :id="id" v-model="role.name" mono placeholder="regular" :invalid="!!role.name && !validName" /></template>
+          </VxField>
+          <VxField label="Rank" :help="`${data.range[0]} to ${rankMax}: below your own.`">
+            <template #default="{ id }"><VxStepper :id="id" v-model="role.rank" :min="data.range[0]" :max="rankMax" :step="5" /></template>
+          </VxField>
+          <VxButton type="submit" variant="primary" :loading="busy.has('r-add')" :disabled="!validName">Create</VxButton>
+        </form>
+      </template>
+    </VxLoadState>
 
     <VxDialog v-model:open="givingOpen" :title="`Give ${giving.role}`">
       <form id="give-form" class="dialog-form" @submit.prevent="give">

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Where the Manage bar starts: the channels this session runs (every one, for an admin), with its rank in each,
 // adding the bot to the user's own channel, and the latest changes it can see.
-import { VxButton, VxCallout, VxChip, VxSkeleton, VxStatusDot } from '@vex/ui'
+import { VxChip, VxLoadState, VxStatusDot } from '@vex/ui'
 import { computed } from 'vue'
 import { AuditTable } from '@vex/platform-web/vue'
 import { useResource } from '@vex/ui/utils'
@@ -40,55 +40,51 @@ const down = computed(() =>
 <template>
   <ManageShell title="Overview">
     <OwnChannelCard />
-    <VxCallout v-if="error" tone="error" title="Couldn't load your channels">
-      {{ errorText(error) }}
-      <template #actions><VxButton size="sm" @click="reload">Try again</VxButton></template>
-    </VxCallout>
-    <div v-else-if="!data" class="loading" aria-busy="true"><VxSkeleton v-for="i in 6" :key="i" h="38px" /></div>
-    <template v-else>
-      <section v-if="data.ready">
-        <h2 class="vx-eyebrow sec">The bot</h2>
-        <p class="status">
-          <VxStatusDot :status="down.length ? 'down' : 'ok'" :label="down.length ? `trouble: ${down.join(', ')}` : 'all good'" />
-          <RouterLink to="/manage/bot" class="vx-btn is-sm">Health, joining and keys</RouterLink>
-        </p>
-      </section>
+    <VxLoadState :error="error" :stale="!!data" :loading="!data" error-title="Couldn't load your channels" :error-text="errorText" :rows="6" @retry="reload">
+      <template v-if="data">
+        <section v-if="data.ready">
+          <h2 class="vx-eyebrow sec">The bot</h2>
+          <p class="status">
+            <VxStatusDot :status="down.length ? 'down' : 'ok'" :label="down.length ? `trouble: ${down.join(', ')}` : 'all good'" />
+            <RouterLink to="/manage/bot" class="vx-btn is-sm">Health, joining and keys</RouterLink>
+          </p>
+        </section>
 
-      <section>
-        <h2 class="vx-eyebrow sec">{{ isAdmin() ? 'Channels' : 'Channels you manage' }}</h2>
-        <div v-if="data.channels.length" class="table-scroll vx-panel">
-          <table class="vx-table">
-            <thead><tr><th>Channel</th><th>You are</th><th>Status</th><th>Sign</th><th>Tier</th><th>Logging</th></tr></thead>
-            <tbody>
-              <tr v-for="c in data.channels" :key="c.channel_id">
-                <td><RouterLink :to="`/manage/channels/${c.login}`" class="chan">#{{ c.login }}</RouterLink></td>
-                <td><VxChip :tone="session.channelRoles?.[c.login] === 'broadcaster' ? 'ok' : 'default'">{{ role(c.login) }}</VxChip></td>
-                <td><VxStatusDot :status="c.banned ? 'warn' : c.active && c.status === 'joined' ? 'ok' : 'off'" :label="c.status" /></td>
-                <td class="vx-mono">{{ c.prefix }}</td>
-                <td>{{ c.tier }}</td>
-                <td>{{ c.log_enabled ? 'on' : 'off' }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p v-else class="vx-muted">
-          You don't run a channel the bot is in. You can still write and publish your own commands, and try anything
-          in <RouterLink to="/manage/explain">Explain</RouterLink>: see <RouterLink to="/manage/me">Me</RouterLink>.
-        </p>
-      </section>
+        <section>
+          <h2 class="vx-eyebrow sec">{{ isAdmin() ? 'Channels' : 'Channels you manage' }}</h2>
+          <div v-if="data.channels.length" class="table-scroll vx-panel">
+            <table class="vx-table">
+              <thead><tr><th>Channel</th><th>You are</th><th>Status</th><th>Sign</th><th>Tier</th><th>Logging</th></tr></thead>
+              <tbody>
+                <tr v-for="c in data.channels" :key="c.channel_id">
+                  <td><RouterLink :to="`/manage/channels/${c.login}`" class="chan">#{{ c.login }}</RouterLink></td>
+                  <td><VxChip :tone="session.channelRoles?.[c.login] === 'broadcaster' ? 'ok' : 'default'">{{ role(c.login) }}</VxChip></td>
+                  <td><VxStatusDot :status="c.banned ? 'warn' : c.active && c.status === 'joined' ? 'ok' : 'off'" :label="c.status" /></td>
+                  <td class="vx-mono">{{ c.prefix }}</td>
+                  <td>{{ c.tier }}</td>
+                  <td>{{ c.log_enabled ? 'on' : 'off' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p v-else class="vx-muted">
+            You don't run a channel the bot is in. You can still write and publish your own commands, and try anything
+            in <RouterLink to="/manage/explain">Explain</RouterLink>: see <RouterLink to="/manage/me">Me</RouterLink>.
+          </p>
+        </section>
 
-      <section>
-        <h2 class="vx-eyebrow sec">Recent changes</h2>
-        <AuditTable :entries="data.audit" :scope-names="Object.fromEntries(data.channels.map((c) => [c.channel_id, c.login]))" empty="Nothing changed yet.">
-        </AuditTable>
-        <div class="row"><RouterLink to="/manage/audit" class="vx-btn">All changes</RouterLink></div>
-      </section>
-    </template>
+        <section>
+          <h2 class="vx-eyebrow sec">Recent changes</h2>
+          <AuditTable :entries="data.audit" :scope-names="Object.fromEntries(data.channels.map((c) => [c.channel_id, c.login]))" empty="Nothing changed yet.">
+          </AuditTable>
+          <div class="row"><RouterLink to="/manage/audit" class="vx-btn">All changes</RouterLink></div>
+        </section>
+      </template>
+    </VxLoadState>
   </ManageShell>
 </template>
 
 <style scoped>
-.loading { display: grid; gap: 6px; }
 section { margin-bottom: 28px; }
 .sec { margin: 0 0 8px; }
 .status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0; }
