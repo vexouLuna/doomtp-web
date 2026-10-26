@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Builtin, CustomCommand, Pack, Publication } from '../src/lib/api'
-import { channelRows, filterRows, referenceRows } from '../src/lib/commands'
+import { channelRows, filterRows, nameLine, referenceRows } from '../src/lib/commands'
 
 const spec = (over: Partial<Builtin> = {}): Builtin => ({
   name: 'random', module: 'fun', aliases: ['rng'], summary: 'Roll a number', description: 'Roll a number',
@@ -28,6 +28,25 @@ describe('command rows', () => {
     const [row] = referenceRows([spec({ toggleable: false, fixed_policy: true, default_cooldowns: { everyone: { tier_s: 3, user_s: 10 } } })], [], [], '!')
     expect(row!.alwaysOn && row!.fixedPolicy).toBe(true)
     expect(row!.cooldowns).toEqual([{ role: 'everyone', shared: 3, personal: 10 }])
+  })
+
+  it('lists forms beside the commands, with their Returns and how each is typed', () => {
+    const rows = referenceRows(
+      [
+        spec({ name: 'switch', module: 'language', kind: 'form', usage: 'switch <value> <case> ( then )' }),
+        spec({ name: '|', module: 'language', kind: 'form', usage: 'a | b' }),
+        spec({ data: { '': 'int: the number' } }),
+      ],
+      [{ ...custom('hug', { data: { '': '{a?: str, message: str?}' } }), published_as: 'hug' }],
+      [],
+      '!',
+    )
+    const by = Object.fromEntries(rows.map((r) => [r.name, r]))
+    expect([by.switch!.kind, by.random!.kind]).toEqual(['form', 'built-in'])
+    expect([nameLine(by.switch!, '!'), nameLine(by['|']!, '!')]).toEqual(['!switch <value> <case> ( then )', 'a | b'])
+    expect(by.random!.returns).toEqual({ '': 'int: the number' })
+    expect(by.hug!.returns).toEqual({ '': '{a?: str, message: str?}' })
+    expect(by.ping?.returns ?? {}).toEqual({}) // an older bot sends no data
   })
 
   it('a channel page shows only active publications, under the name they were published as', () => {

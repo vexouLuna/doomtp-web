@@ -22,7 +22,8 @@ const { data: rows, error, reload } = useResource(async () => {
     <div class="doc">
       <h1 class="vx-display">Command reference</h1>
       <p class="vx-muted">
-        Every built-in command the bot has.
+        Every built-in command the bot has, and the parts of the language that sit between them
+        (<code>ifelse</code>, <code>switch</code>, <code>|</code>, <code>&amp;&amp;</code> and the rest, under language).
         <Cmd t="help" :sign="sign" /> in chat lists only what you can run in that channel, with the command
         sign that channel uses. Click a command for its arguments, cooldowns and examples.
       </p>

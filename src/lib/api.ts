@@ -99,6 +99,10 @@ export interface Builtin {
   default_cooldowns: Record<string, { tier_s: number; user_s: number }>
   toggleable?: boolean
   fixed_policy?: boolean
+  /** `form`: grammar such as `ifelse` or `|`, listed beside the commands; its `usage` is its syntax (doomtp-bot ADR-0037). */
+  kind?: 'command' | 'form'
+  /** What `{_}` holds afterwards, per way of calling it ("" is the plain one). */
+  data?: Record<string, string>
 }
 export interface CustomCommand {
   id: string
@@ -109,6 +113,8 @@ export interface CustomCommand {
   version: number
   shareable: boolean
   params?: Param[]
+  /** Read by the bot from the body's `result` stages; `key?` is a field not every ending returns (ADR-0037). */
+  data?: Record<string, string>
 }
 export interface Pack {
   name: string

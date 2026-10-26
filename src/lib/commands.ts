@@ -2,7 +2,7 @@
 // reference and the channel pages (as the bot's own pages did), so both kinds share one shape.
 import type { Builtin, CustomCommand, Pack, Param, Publication } from './api'
 
-export type RowKind = 'built-in' | 'derived' | 'published'
+export type RowKind = 'built-in' | 'form' | 'derived' | 'published'
 
 export interface CommandRow {
   key: string
@@ -19,6 +19,8 @@ export interface CommandRow {
   aliases: string[]
   params: Param[]
   examples: { invocation: string; output: string | null }[]
+  /** What `{_}` holds afterwards, per way of calling it ("" is the plain one). */
+  returns: Record<string, string>
   cooldowns: { role: string; shared: number; personal: number }[]
   alwaysOn: boolean
   fixedPolicy: boolean
@@ -42,7 +44,7 @@ export function builtinRow(spec: Builtin, defaultPrefix: string, prefix = defaul
     name: spec.name,
     usage: spec.usage,
     module: spec.module,
-    kind: 'built-in',
+    kind: spec.kind === 'form' ? 'form' : 'built-in',
     internal: false,
     role: spec.required_role,
     summary,
@@ -50,6 +52,7 @@ export function builtinRow(spec: Builtin, defaultPrefix: string, prefix = defaul
     aliases: spec.aliases,
     params: spec.params,
     examples: spec.examples.map((e) => ({ invocation: withSign(e.invocation, defaultPrefix, prefix), output: e.output })),
+    returns: spec.data ?? {},
     cooldowns: Object.entries(spec.default_cooldowns).map(([role, c]) => ({ role, shared: c.tier_s, personal: c.user_s })),
     alwaysOn: spec.toggleable === false,
     fixedPolicy: spec.fixed_policy === true,
@@ -82,6 +85,7 @@ export function customRow(
     aliases: [],
     params: command.params ?? [],
     examples: [],
+    returns: command.data ?? {},
     cooldowns: [],
     alwaysOn: false,
     fixedPolicy: false,
@@ -107,6 +111,7 @@ export function bareRow(name: string, module: string, summary: string): CommandR
     aliases: [],
     params: [],
     examples: [],
+    returns: {},
     cooldowns: [],
     alwaysOn: false,
     fixedPolicy: false,
@@ -115,6 +120,11 @@ export function bareRow(name: string, module: string, summary: string): CommandR
     body: '',
     search: [name, module, summary].join(' ').toLowerCase(),
   }
+}
+
+/** The row's name as typed: with the sign, except a pack's helper (never typed) and an operator (`a | b`). */
+export function nameLine(row: CommandRow, sign: string): string {
+  return row.internal || (row.kind === 'form' && !/^[a-z]+$/.test(row.name)) ? row.usage : `${sign}${row.usage}`
 }
 
 /** By module, the commands chat can type before their pack's internal helpers, then by name. */
