@@ -133,6 +133,11 @@ const GRANT_COLUMNS: TableColumn[] = [
   { key: 'owner', label: 'By', muted: true },
   { key: 'vars', label: 'May write' },
 ]
+const NOT_HERE_COLUMNS: TableColumn[] = [
+  { key: 'name', label: 'Command', nowrap: true },
+  { key: 'body', label: 'Body', class: 'wrap body' },
+  { key: 'actions', label: '', class: 'end' },
+]
 </script>
 
 <template>
@@ -152,7 +157,7 @@ const GRANT_COLUMNS: TableColumn[] = [
         <ChatLine :lines="`${sign}cc disable <name>`" :sign="sign" /> in chat<template v-if="!mayPublish">, for
         {{ publishRole }} and up</template>; a pack's commands turn on and off with the pack, on the Modules tab.
       </p>
-      <VxTable class="vx-panel" :columns="COLUMNS" :rows="published" :row-key="(p) => `${p.module}/${p.name}`" label="Published commands">
+      <VxTable wrap class="vx-panel" :columns="COLUMNS" :rows="published" :row-key="(p) => `${p.module}/${p.name}`" label="Published commands">
         <template #cell-name="{ row: p }">
           <ChatLine :lines="`${sign}${p.name}`" :sign="sign" />
           <div v-if="p.summary" class="vx-muted small">{{ p.summary }}</div>
@@ -195,25 +200,19 @@ const GRANT_COLUMNS: TableColumn[] = [
         Your commands chat here can't run yet. Publishing one is
         <ChatLine :lines="`${sign}cc publish <name>`" :sign="sign" /> typed here.
       </p>
-      <div class="table-scroll vx-panel">
-        <table class="vx-table">
-          <tbody>
-            <tr v-for="c in mine.data.value.notHere" :key="c.id">
-              <td class="nowrap">
-                <span class="vx-mono">{{ c.name }}</span>
-                <div v-if="c.summary" class="vx-muted small">{{ c.summary }}</div>
-              </td>
-              <td class="wrap body"><ChatLine :lines="c.body" :sign="sign" context="body" /></td>
-              <td class="end"><VxButton size="sm" variant="ghost" @click="openPublish(c.name)">Publish</VxButton></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <VxTable wrap headless class="vx-panel" :columns="NOT_HERE_COLUMNS" :rows="mine.data.value.notHere" row-key="id" label="Your commands not published here">
+        <template #cell-name="{ row: c }">
+          <span class="vx-mono">{{ c.name }}</span>
+          <div v-if="c.summary" class="vx-muted small">{{ c.summary }}</div>
+        </template>
+        <template #cell-body="{ row: c }"><ChatLine :lines="c.body" :sign="sign" context="body" /></template>
+        <template #cell-actions="{ row: c }"><VxButton size="sm" variant="ghost" @click="openPublish(c.name)">Publish</VxButton></template>
+      </VxTable>
     </template>
 
     <template v-if="packs.length">
       <h2 class="vx-eyebrow sub">Packs</h2>
-      <VxTable class="vx-panel" :columns="PACK_COLUMNS" :rows="packs" :row-key="(p) => `${p.scope}/${p.name}`" label="Packs">
+      <VxTable wrap class="vx-panel" :columns="PACK_COLUMNS" :rows="packs" :row-key="(p) => `${p.scope}/${p.name}`" label="Packs">
         <template #cell-name="{ row: p }">{{ p.name }}<div v-if="p.summary" class="vx-muted small">{{ p.summary }}</div></template>
         <template #cell-commands="{ row: p }">{{ p.commands.map((c) => c.name).join(', ') }}</template>
         <template #cell-scope="{ row: p }">
@@ -238,7 +237,7 @@ const GRANT_COLUMNS: TableColumn[] = [
     </p>
     <VxCallout v-if="grants.error.value" tone="error" title="Couldn't load the grants">{{ errorText(grants.error.value) }}</VxCallout>
     <VxEmptyState v-else-if="grants.data.value && !grants.data.value.length" title="Nothing to grant" text="No command published here writes channel variables." />
-    <VxTable v-else-if="grants.data.value" class="vx-panel" :columns="GRANT_COLUMNS" :rows="grants.data.value" row-key="id" label="Variable grants">
+    <VxTable wrap v-else-if="grants.data.value" class="vx-panel" :columns="GRANT_COLUMNS" :rows="grants.data.value" row-key="id" label="Variable grants">
       <template #cell-name="{ row: g }"><ChatLine :lines="`${sign}${g.name}`" :sign="sign" /></template>
       <template #cell-owner="{ row: g }">@{{ g.owner }}</template>
       <template #cell-vars="{ row: g }">

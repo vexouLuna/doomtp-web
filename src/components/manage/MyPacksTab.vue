@@ -2,7 +2,7 @@
 // Your packs, as `pack` manages them in chat: a named set of your commands that is published and turned on and off
 // as one module. An internal member runs only when another command in the pack calls it. A pack's own triggers
 // (ADR-0032) run wherever it is published. Each member's rank (ADR-0033) is the least a channel can require of it.
-import { VxButton, VxCheckbox, VxChip, VxConfirm, VxEmptyState, VxField, VxInput, VxLoadState, VxSelect, VxSwitch } from '@vex/ui'
+import { VxButton, VxCheckbox, VxChip, VxConfirm, VxEmptyState, VxField, VxInput, VxLoadState, VxSelect, VxSwitch, VxTable, type TableColumn } from '@vex/ui'
 import { computed, reactive, ref } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -42,6 +42,13 @@ async function add(p: MyPack) {
 }
 const where = (p: MyPack) => p.published.map((c) => (c === 'global' ? 'everywhere' : `#${c}`))
 const deleting = ref<MyPack | null>(null)
+const PACK_COMMAND_COLUMNS: TableColumn[] = [
+  { key: 'command', label: 'Command', mono: true },
+  { key: 'shared', label: 'Shared' },
+  { key: 'internal', label: 'Internal' },
+  { key: 'role', label: 'Role' },
+  { key: 'actions', label: '', class: 'end' },
+]
 </script>
 
 <template>
@@ -71,46 +78,38 @@ const deleting = ref<MyPack | null>(null)
           <p class="small published">
             <span class="vx-muted">Published:</span> {{ where(p).join(', ') || 'nowhere yet' }}
           </p>
-          <div v-if="p.commands.length" class="table-scroll">
-          <table class="vx-table">
-            <tbody>
-              <tr v-for="c in p.commands" :key="c.name">
-                <td class="vx-mono">{{ c.name }}</td>
-                <td>
-                  <VxChip v-if="!c.shareable" tone="warn">not shared</VxChip>
-                </td>
-                <td>
-                  <VxSwitch
-                    :model-value="c.internal"
-                    :disabled="busy.has(`in:${p.name}:${c.name}`)"
-                    label="Internal"
-                    @update:model-value="(on: boolean) => act(`in:${p.name}:${c.name}`, () => admin.addToPack(p.name, c.name, { internal: on }), on ? `${c.name} is internal: only ${p.name}'s commands can call it` : `${c.name} is public again`)"
-                  />
-                </td>
-                <td>
-                  <VxSelect
-                    v-if="c.role"
-                    :model-value="c.role"
-                    :options="RANKS"
-                    size="sm"
-                    width="170px"
-                    :aria-label="`Who may run ${c.name}`"
-                    :disabled="busy.has(`rk:${p.name}:${c.name}`)"
-                    @update:model-value="(r?: string) => r && act(`rk:${p.name}:${c.name}`, () => admin.addToPack(p.name, c.name, { role: r }), ranked(r, c.name, p.name))"
-                  />
-                </td>
-                <td class="end">
-                  <VxButton
-                    size="sm"
-                    variant="ghost"
-                    :loading="busy.has(`rm:${p.name}:${c.name}`)"
-                    @click="act(`rm:${p.name}:${c.name}`, () => admin.removeFromPack(p.name, c.name), `${c.name} taken out of ${p.name}`)"
-                  >Remove</VxButton>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          </div>
+          <VxTable wrap headless v-if="p.commands.length" :columns="PACK_COMMAND_COLUMNS" :rows="p.commands" row-key="name">
+            <template #cell-command="{ row: c }">{{ c.name }}</template>
+            <template #cell-shared="{ row: c }"><VxChip v-if="!c.shareable" tone="warn">not shared</VxChip></template>
+            <template #cell-internal="{ row: c }">
+              <VxSwitch
+                :model-value="c.internal"
+                :disabled="busy.has(`in:${p.name}:${c.name}`)"
+                label="Internal"
+                @update:model-value="(on: boolean) => act(`in:${p.name}:${c.name}`, () => admin.addToPack(p.name, c.name, { internal: on }), on ? `${c.name} is internal: only ${p.name}'s commands can call it` : `${c.name} is public again`)"
+              />
+            </template>
+            <template #cell-role="{ row: c }">
+              <VxSelect
+                v-if="c.role"
+                :model-value="c.role"
+                :options="RANKS"
+                size="sm"
+                width="170px"
+                :aria-label="`Who may run ${c.name}`"
+                :disabled="busy.has(`rk:${p.name}:${c.name}`)"
+                @update:model-value="(r?: string) => r && act(`rk:${p.name}:${c.name}`, () => admin.addToPack(p.name, c.name, { role: r }), ranked(r, c.name, p.name))"
+              />
+            </template>
+            <template #cell-actions="{ row: c }">
+              <VxButton
+                size="sm"
+                variant="ghost"
+                :loading="busy.has(`rm:${p.name}:${c.name}`)"
+                @click="act(`rm:${p.name}:${c.name}`, () => admin.removeFromPack(p.name, c.name), `${c.name} taken out of ${p.name}`)"
+              >Remove</VxButton>
+            </template>
+          </VxTable>
           <p v-else class="vx-muted small">No commands in it yet.</p>
           <form class="add-cmd" @submit.prevent="add(p)">
             <VxSelect v-model="addFor(p).command" :options="choices(p)" placeholder="Add one of your commands" :disabled="!choices(p).length" />

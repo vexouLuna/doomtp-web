@@ -41,7 +41,7 @@ const outcome = (r: Run): { label: string; tone: 'ok' | 'bad' | 'warn' } =>
       <VxButton :loading="loading" @click="reload">Refresh</VxButton>
     </div>
     <VxLoadState :error="error" :stale="!!data" :loading="!data" :empty="!data?.length" error-title="Couldn't load the runs" :error-text="errorText" :rows="6" empty-title="Nothing ran here yet" empty-text="Commands and triggers show up here once they run." @retry="reload">
-      <VxTable v-if="data" class="vx-panel" :columns="COLUMNS" :rows="rows" label="Runs">
+      <VxTable wrap v-if="data" class="vx-panel" :columns="COLUMNS" :rows="rows" label="Runs">
         <template #cell-at="{ row }"><span :title="new Date(row.at).toLocaleString()">{{ timeAgo(row.at) }}</span></template>
         <template #cell-trigger_type="{ row }"><VxChip :tone="row.trigger_type ? 'accent' : 'default'">{{ row.trigger_type ?? 'command' }}</VxChip></template>
         <template #cell-expr="{ row }"><ChatLine :lines="row.expr" :sign="sign" context="body" /></template>

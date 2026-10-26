@@ -83,6 +83,15 @@ async function addAdmin() {
   if (who && (await act('admin', () => admin.addAdmin(who), `@${who} is a bot admin`))) adminLogin.value = ''
 }
 const removing = ref<AdminUser | null>(null)
+const ADMIN_COLUMNS: TableColumn[] = [
+  { key: 'login', label: 'Admin', mono: true },
+  { key: 'role', label: 'Role' },
+  { key: 'actions', label: '', class: 'end' },
+]
+const admins = computed(() => [
+  ...(data.value?.admins.owners ?? []).map((u) => ({ ...u, owner: true })),
+  ...(data.value?.admins.admins ?? []).map((u) => ({ ...u, owner: false })),
+])
 
 // ── modules ──
 const moduleState = (on: boolean | null) => (on === null ? 'default' : on ? 'on' : 'off')
@@ -162,25 +171,14 @@ function unpublish() {
             Bot admins manage every channel and this page. Owners are set in the bot's configuration; only an owner adds
             or removes admins, as with <code>admin add</code> in chat.
           </p>
-          <div class="table-scroll vx-panel">
-            <table class="vx-table">
-              <tbody>
-                <tr v-for="u in data.admins.owners" :key="u.user_id">
-                  <td class="vx-mono">{{ name(u) }}</td>
-                  <td><VxChip tone="accent">owner</VxChip></td>
-                  <td></td>
-                </tr>
-                <tr v-for="u in data.admins.admins" :key="u.user_id">
-                  <td class="vx-mono">{{ name(u) }}</td>
-                  <td><VxChip>admin</VxChip></td>
-                  <td class="end">
-                    <VxButton v-if="data.admins.you_manage" size="sm" variant="ghost" @click="removing = u">Remove</VxButton>
-                  </td>
-                </tr>
-                <tr v-if="!data.admins.owners.length && !data.admins.admins.length"><td colspan="3" class="vx-muted">No bot admins are set: only the admin password manages the bot.</td></tr>
-              </tbody>
-            </table>
-          </div>
+          <VxTable wrap headless class="vx-panel" :columns="ADMIN_COLUMNS" :rows="admins" row-key="user_id" label="Bot admins">
+            <template #cell-login="{ row }">{{ name(row) }}</template>
+            <template #cell-role="{ row }"><VxChip :tone="row.owner ? 'accent' : 'default'">{{ row.owner ? 'owner' : 'admin' }}</VxChip></template>
+            <template #cell-actions="{ row }">
+              <VxButton v-if="!row.owner && data.admins.you_manage" size="sm" variant="ghost" @click="removing = row">Remove</VxButton>
+            </template>
+            <template #empty>No bot admins are set: only the admin password manages the bot.</template>
+          </VxTable>
           <form v-if="data.admins.you_manage" class="row" @submit.prevent="addAdmin">
             <label class="sr-only" for="admin-login">Twitch login to make an admin</label>
             <VxInput id="admin-login" v-model="adminLogin" placeholder="twitch login" mono grow width="12rem" max-width="20rem" />
@@ -193,7 +191,7 @@ function unpublish() {
             "Each channel" leaves a module to the channels (on unless one turns it off). On or off here applies wherever a
             channel hasn't set its own.
           </p>
-          <VxTable class="vx-panel" :columns="MODULE_COLUMNS" :rows="data.modules" row-key="module" label="Modules everywhere">
+          <VxTable wrap class="vx-panel" :columns="MODULE_COLUMNS" :rows="data.modules" row-key="module" label="Modules everywhere">
             <template #cell-enabled="{ row }">
               <VxSegmented
                 v-if="row.toggleable"
@@ -219,7 +217,7 @@ function unpublish() {
             Commands and packs every channel has, as <code>cc publish &lt;name&gt; global</code> does in chat. A channel still
             turns them off for itself.
           </p>
-          <VxTable class="vx-panel" :columns="PUBLISHED_COLUMNS" :rows="published" row-key="key" label="Published everywhere">
+          <VxTable wrap class="vx-panel" :columns="PUBLISHED_COLUMNS" :rows="published" row-key="key" label="Published everywhere">
             <template #cell-name="{ row }"><span class="vx-mono">{{ row.name }}</span> <VxChip v-if="row.unpublish.kind === 'pack'">pack</VxChip></template>
             <template #cell-actions="{ row }"><VxButton size="sm" variant="ghost" @click="unpublishing = row.unpublish">Unpublish</VxButton></template>
             <template #empty>Nothing is published everywhere.</template>

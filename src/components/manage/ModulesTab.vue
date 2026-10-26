@@ -28,7 +28,7 @@ const resetModule = (name: string) =>
       covers. <b>Default</b> drops this channel's choice, as <ChatLine :lines="`${sign}module reset <name>`" :sign="sign" />
       does, so the module follows the bot-wide setting.
     </p>
-    <VxTable class="vx-panel" :columns="COLUMNS" :rows="modules" row-key="name" label="Modules">
+    <VxTable wrap class="vx-panel" :columns="COLUMNS" :rows="modules" row-key="name" label="Modules">
       <template #cell-name="{ row: m }">
         <span class="vx-mono">{{ m.name }}</span>
         <VxChip v-if="m.kind === 'pack'" :tone="m.scope === 'global' ? 'default' : 'accent'">{{ m.scope === 'global' ? 'pack · everywhere' : 'pack' }}</VxChip>

@@ -60,7 +60,7 @@ const COLUMNS: TableColumn[] = [
 
         <section>
           <h2 class="vx-eyebrow sec">{{ isAdmin() ? 'Channels' : 'Channels you manage' }}</h2>
-          <VxTable v-if="data.channels.length" class="vx-panel" :columns="COLUMNS" :rows="data.channels" row-key="channel_id" label="Channels">
+          <VxTable wrap v-if="data.channels.length" class="vx-panel" :columns="COLUMNS" :rows="data.channels" row-key="channel_id" label="Channels">
             <template #cell-login="{ row: c }"><RouterLink :to="`/manage/channels/${c.login}`" class="chan">#{{ c.login }}</RouterLink></template>
             <template #cell-role="{ row: c }">
               <VxChip :tone="session.channelRoles?.[c.login] === 'broadcaster' ? 'ok' : 'default'">{{ role(c.login) }}</VxChip>

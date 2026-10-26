@@ -186,6 +186,18 @@ const LINK_COLUMNS: TableColumn[] = [
   { key: 'owner', label: 'By', muted: true },
   ACTIONS,
 ]
+const PARAM_COLUMNS: TableColumn[] = [
+  { key: 'position', label: 'Position', mono: true },
+  { key: 'name', label: 'Name', mono: true },
+  { key: 'description', label: 'Description', muted: true, class: 'small' },
+  { key: 'actions', label: '', class: 'end' },
+]
+const VERSION_COLUMNS: TableColumn[] = [
+  { key: 'version', label: 'Version', mono: true, nowrap: true },
+  { key: 'body', label: 'Body', class: 'wrap' },
+  { key: 'when', label: 'When', muted: true, nowrap: true, class: 'small' },
+  { key: 'actions', label: '', class: 'end' },
+]
 </script>
 
 <template>
@@ -200,7 +212,7 @@ const LINK_COLUMNS: TableColumn[] = [
           <VxButton variant="primary" size="sm" @click="openNew()">New command</VxButton>
         </div>
         <VxEmptyState v-if="!data.commands.length" title="No commands yet" text="Write one here, or with !cc add in a channel the bot is in." />
-        <VxTable v-else class="vx-panel" :columns="COLUMNS" :rows="data.commands" row-key="id" label="Your commands">
+        <VxTable wrap v-else class="vx-panel" :columns="COLUMNS" :rows="data.commands" row-key="id" label="Your commands">
           <template #cell-name="{ row: c }">
             <span class="vx-mono">{{ c.name }}</span>
             <VxChip v-if="c.shareable" tone="accent" class="chip">shared</VxChip>
@@ -231,7 +243,7 @@ const LINK_COLUMNS: TableColumn[] = [
           you can publish it under that name where you may publish.
         </p>
         <VxEmptyState v-if="!data.linked.length" title="No links" />
-        <VxTable v-else class="vx-panel" :columns="LINK_COLUMNS" :rows="data.linked" row-key="alias" label="Linked">
+        <VxTable wrap v-else class="vx-panel" :columns="LINK_COLUMNS" :rows="data.linked" row-key="alias" label="Linked">
           <template #cell-name="{ row: l }">{{ l.name }}<div v-if="l.summary" class="vx-muted small">{{ l.summary }}</div></template>
           <template #cell-owner="{ row: l }">@{{ l.owner }}</template>
           <template #cell-actions="{ row: l }">
@@ -279,19 +291,15 @@ const LINK_COLUMNS: TableColumn[] = [
       </form>
       <h3 class="vx-eyebrow sub">Parameters</h3>
       <p class="vx-muted small">Positions run 1, 2, 3…; one N+ at the end takes the rest of the line. Each saves on its own.</p>
-      <table v-if="edit.params.length" class="vx-table params">
-        <tbody>
-          <tr v-for="p in edit.params" :key="p.position">
-            <td class="vx-mono">{{ p.position }}</td>
-            <td class="vx-mono">{{ p.name }}<span class="vx-muted">: {{ p.type }}{{ p.required ? '' : '?' }}</span></td>
-            <td class="vx-muted small">{{ p.description }}<template v-if="p.choices?.length"> ({{ p.choices.join(', ') }})</template></td>
-            <td class="end">
-              <VxButton size="sm" variant="ghost" @click="pickParam(p)">Edit</VxButton>
-              <VxButton size="sm" variant="ghost" :loading="busy.has(`param:${p.position}`)" @click="dropParam(p)">Remove</VxButton>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <VxTable wrap headless v-if="edit.params.length" class="params" :columns="PARAM_COLUMNS" :rows="edit.params" row-key="position">
+        <template #cell-position="{ row: p }">{{ p.position }}</template>
+        <template #cell-name="{ row: p }">{{ p.name }}<span class="vx-muted">: {{ p.type }}{{ p.required ? '' : '?' }}</span></template>
+        <template #cell-description="{ row: p }">{{ p.description }}<template v-if="p.choices?.length"> ({{ p.choices.join(', ') }})</template></template>
+        <template #cell-actions="{ row: p }">
+          <VxButton size="sm" variant="ghost" @click="pickParam(p)">Edit</VxButton>
+          <VxButton size="sm" variant="ghost" :loading="busy.has(`param:${p.position}`)" @click="dropParam(p)">Remove</VxButton>
+        </template>
+      </VxTable>
       <form class="param-form vx-form-row" @submit.prevent="saveParam">
         <VxField label="Position">
           <template #default="{ id }"><VxInput :id="id" v-model="param.position" mono class="pos" /></template>
@@ -327,19 +335,15 @@ const LINK_COLUMNS: TableColumn[] = [
         :rows="3"
         @retry="versions.reload"
       >
-        <table v-if="versions.data.value" class="vx-table">
-          <tbody>
-            <tr v-for="v in [...versions.data.value.versions].reverse()" :key="v.version">
-              <td class="vx-mono nowrap">v{{ v.version }}</td>
-              <td class="wrap"><ChatLine :lines="v.body" sign="!" context="body" /></td>
-              <td class="vx-muted small nowrap" :title="new Date(v.created_at).toLocaleString()">{{ timeAgo(v.created_at) }}</td>
-              <td class="end">
-                <VxChip v-if="v.version === versions.data.value.current" tone="ok">current</VxChip>
-                <VxButton v-else size="sm" variant="ghost" :loading="busy.has(`rev:${v.version}`)" @click="revert(v.version)">Revert to this</VxButton>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <VxTable wrap headless v-if="versions.data.value" :columns="VERSION_COLUMNS" :rows="[...versions.data.value.versions].reverse()" row-key="version">
+          <template #cell-version="{ row: v }">v{{ v.version }}</template>
+          <template #cell-body="{ row: v }"><ChatLine :lines="v.body" sign="!" context="body" /></template>
+          <template #cell-when="{ row: v }"><span :title="new Date(v.created_at).toLocaleString()">{{ timeAgo(v.created_at) }}</span></template>
+          <template #cell-actions="{ row: v }">
+            <VxChip v-if="v.version === versions.data.value.current" tone="ok">current</VxChip>
+            <VxButton v-else size="sm" variant="ghost" :loading="busy.has(`rev:${v.version}`)" @click="revert(v.version)">Revert to this</VxButton>
+          </template>
+        </VxTable>
       </VxLoadState>
       <template #actions="{ close }"><VxButton @click="close">Close</VxButton></template>
     </VxDialog>

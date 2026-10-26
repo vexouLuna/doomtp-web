@@ -203,7 +203,7 @@ async function loadTop() {
           />
           <template v-else>
             <VxInput v-model="query" class="search" placeholder="Find a variable or value" aria-label="Find a variable" />
-            <VxTable class="vx-panel" :columns="CHANNEL_COLUMNS" :rows="rows" row-key="name" label="Channel variables">
+            <VxTable wrap class="vx-panel" :columns="CHANNEL_COLUMNS" :rows="rows" row-key="name" label="Channel variables">
               <template #cell-name="{ row: v }">channel.{{ v.name }}</template>
               <template #cell-value="{ row: v }">{{ shown(v.value) }}</template>
               <template #cell-updated_at="{ row: v }">
@@ -230,7 +230,7 @@ async function loadTop() {
           <VxCallout v-if="top.error" tone="error" title="Couldn't load the leaderboard">{{ errorText(top.error) }}</VxCallout>
           <p v-else-if="top.rows === null" class="vx-muted small">Name a channel.chatter variable that holds numbers.</p>
           <VxEmptyState v-else-if="!top.rows.length" title="Nobody has a number there yet" />
-          <VxTable v-else class="vx-panel" :columns="TOP_COLUMNS" :rows="top.rows" row-key="chatter_id" label="Leaderboard">
+          <VxTable wrap v-else class="vx-panel" :columns="TOP_COLUMNS" :rows="top.rows" row-key="chatter_id" label="Leaderboard">
             <template #cell-chatter_id="{ row: r }"><UserRef :id="r.chatter_id" :login="r.chatter_login" /></template>
             <template #cell-value="{ row: r }">{{ shown(r.value) }}</template>
           </VxTable>
@@ -255,7 +255,7 @@ async function loadTop() {
             empty-text="Commands save these as chatters use them."
             @retry="loadOther()"
           >
-            <VxTable class="vx-panel" :columns="otherColumns" :rows="other.rows" label="Variables">
+            <VxTable wrap class="vx-panel" :columns="otherColumns" :rows="other.rows" label="Variables">
               <template #cell-name="{ row: v }">{{ prefix(view) }}{{ v.name }}</template>
               <template #cell-publisher_id="{ row: v }"><UserRef :id="v.publisher_id" :login="v.publisher_login" /></template>
               <template #cell-chatter_id="{ row: v }"><UserRef :id="v.chatter_id" :login="v.chatter_login" /></template>

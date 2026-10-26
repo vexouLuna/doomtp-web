@@ -98,7 +98,7 @@ function roleSource(name: string): string {
 
       <h2 id="permissions" class="vx-display">Roles and permissions</h2>
       <p>Roles are ranked. A command requires a role, and anyone whose rank reaches it may run the command.</p>
-      <VxLoadState :loading="!roles" :rows="5" row-height="26px">
+      <VxLoadState :loading="!roles" :rows="5" row-height="26px" margin="0 0 12px">
         <div v-if="roles" class="table-scroll">
           <table class="vx-table">
             <thead><tr><th>Role</th><th>Rank</th><th>Comes from</th></tr></thead>
