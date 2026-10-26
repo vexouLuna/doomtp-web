@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // A channel's settings as a form: only what changed is sent, as one PATCH, the same change `config` makes in chat.
-import { VxButton, VxField, VxInput, VxSegmented, VxSelect, VxStepper, VxSwitch, useToast } from '@vex/ui'
+import { VxField, VxInput, VxSegmented, VxSelect, VxStepper, VxSaveBar, VxSwitch, useToast } from '@vex/ui'
 import { computed, reactive, shallowRef, watch } from 'vue'
 import { can } from '@/lib/access'
 import { admin, type Channel, type ChannelPatch } from '@/lib/admin'
@@ -165,13 +165,7 @@ const ROLE_FIELDS: [keyof Form, string, string][] = [
       </div>
     </div>
 
-    <div class="bar">
-      <span v-if="state.error" class="err" role="alert">{{ state.error }}</span>
-      <span v-else-if="dirty" class="vx-muted">Unsaved changes</span>
-      <span class="spacer"></span>
-      <VxButton :disabled="!dirty || state.busy" @click="reset">Reset</VxButton>
-      <VxButton type="submit" variant="primary" :loading="state.busy" :disabled="!dirty">Save</VxButton>
-    </div>
+    <VxSaveBar class="bar" :count="Object.keys(patch).length" :saving="state.busy" :error="state.error" submit @undo="reset" />
   </form>
 </template>
 
@@ -184,11 +178,6 @@ const ROLE_FIELDS: [keyof Form, string, string][] = [
 .role { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; }
 .role code { display: block; }
 .role code { font-size: 12px; }
-.bar {
-  grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
-  position: sticky; bottom: 0; padding: 10px 0; background: var(--vx-bg);
-}
-.spacer { flex: 1; }
-.err { color: var(--vx-bad); }
+.bar { grid-column: 1 / -1; }
 .locked { font-size: 12px; margin: 0; }
 </style>

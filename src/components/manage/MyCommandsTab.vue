@@ -3,7 +3,7 @@
 // it, look back through its versions and revert, delete it; and your aliases for other people's commands.
 // A command is written "from" a channel, as `cc add` is typed in one: that channel's create role, filter and
 // command sign apply. Publishing one (or an alias) in a channel is `cc publish` typed there: its publish role applies.
-import { VxButton, VxCallout, VxCheckbox, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxSelect, VxSkeleton, VxSwitch, timeAgo, useToast } from '@vex/ui'
+import { VxButton, VxCallout, VxCheckbox, VxChip, VxDialog, VxEmptyState, VxField, VxInput, VxSelect, VxSkeleton, VxSwitch, VxTextarea, timeAgo, useToast } from '@vex/ui'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useResource } from '@vex/ui/utils'
@@ -255,7 +255,7 @@ async function saveLink() {
           <template #default="{ id }"><VxInput :id="id" v-model="draft.channel" mono placeholder="channel" /></template>
         </VxField>
         <VxField label="Body" help="An expression, as after !cc add <name>.">
-          <template #default="{ id }"><textarea :id="id" v-model="draft.body" class="body-input" spellcheck="false" placeholder="echo {$chatter.name} hugs {arg.1}"></textarea></template>
+          <template #default="{ id }"><VxTextarea :id="id" v-model="draft.body" mono spellcheck="false" placeholder="echo {$chatter.name} hugs {arg.1}" /></template>
         </VxField>
         <VxField label="Summary" help="Optional: one line for help and lists.">
           <template #default="{ id }"><VxInput :id="id" v-model="draft.summary" /></template>
@@ -271,7 +271,7 @@ async function saveLink() {
     <VxDialog v-model:open="edit.open" :title="`Edit ${edit.name}`" width="680px">
       <form id="edit-cmd" class="dialog-form" @submit.prevent="saveEdit">
         <VxField label="Body">
-          <template #default="{ id }"><textarea :id="id" v-model="edit.body" class="body-input" spellcheck="false"></textarea></template>
+          <template #default="{ id }"><VxTextarea :id="id" v-model="edit.body" mono spellcheck="false" /></template>
         </VxField>
         <VxField v-if="editPatch.body" label="Checked in" help="The channel whose word filter and sign the new body is checked against; empty: the bot-wide filter.">
           <template #default="{ id }"><VxInput :id="id" v-model="edit.channel" mono /></template>

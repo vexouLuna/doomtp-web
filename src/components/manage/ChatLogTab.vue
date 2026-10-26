@@ -9,7 +9,7 @@
 // chatter's name opens their user card.
 import { loadBadges, loadChannelEmotes, pairRedemptions, removalNote, toChatLine, type ChatLine as Line, type EmoteSet, type LogEntry, type RawBadges } from '@vex/platform-web/chat'
 import { ChatLine, UserCard } from '@vex/platform-web/vue'
-import { VxButton, VxCallout, VxCheckbox, VxEmptyState, VxField, VxInput, VxSelect, VxSkeleton } from '@vex/ui'
+import { VxButton, VxCallout, VxCheckbox, VxDateInput, VxEmptyState, VxField, VxInput, VxSelect, VxSkeleton } from '@vex/ui'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -225,10 +225,10 @@ const paging = computed(() => (asked.value.order === 'asc' ? { back: 'Earlier', 
       </div>
       <div class="vx-form-row">
         <VxField label="From" :error="rangeError ?? undefined">
-          <template #default="{ id }"><input :id="id" v-model="form.since" class="vx-input" type="datetime-local" /></template>
+          <template #default="{ id }"><VxDateInput :id="id" v-model="form.since" time /></template>
         </VxField>
         <VxField label="To" help="Empty: until now.">
-          <template #default="{ id }"><input :id="id" v-model="form.until" class="vx-input" type="datetime-local" :min="form.since || undefined" /></template>
+          <template #default="{ id }"><VxDateInput :id="id" v-model="form.until" time :min="form.since || undefined" /></template>
         </VxField>
         <VxField label="Order">
           <template #default="{ id }"><VxSelect :id="id" v-model="form.order" :options="ORDERS" width="150px" /></template>

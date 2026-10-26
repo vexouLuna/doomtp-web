@@ -2,7 +2,7 @@
 // History backfill jobs for a channel: the queue and the latest finished ones. The broadcaster queues a pass over
 // every gap in the log (as `backfill` does in chat), or any range they pick (from before the bot was listening,
 // say), and cancels a job that hasn't started. Each is a `chat_backfill` job run: an admin follows it to its job page.
-import { VxButton, VxCallout, VxChip, VxEmptyState, VxField, timeAgo } from '@vex/ui'
+import { VxButton, VxCallout, VxChip, VxDateInput, VxEmptyState, VxField, timeAgo } from '@vex/ui'
 import { computed, reactive, ref, watch } from 'vue'
 import { useResource } from '@vex/ui/utils'
 import { errorText } from '@vex/platform-web'
@@ -96,12 +96,12 @@ const result = (j: BackfillJob) =>
       <div class="vx-form-row">
         <VxField label="From" :error="rangeError ?? undefined">
           <template #default="{ id }">
-            <input :id="id" v-model="range.from" class="vx-input" type="datetime-local" :max="localInput(Date.now())" required />
+            <VxDateInput :id="id" v-model="range.from" time :max="localInput(Date.now())" required />
           </template>
         </VxField>
         <VxField label="To" help="Empty: until now.">
           <template #default="{ id }">
-            <input :id="id" v-model="range.to" class="vx-input" type="datetime-local" :min="range.from || undefined" :max="localInput(Date.now())" />
+            <VxDateInput :id="id" v-model="range.to" time :min="range.from || undefined" :max="localInput(Date.now())" />
           </template>
         </VxField>
         <VxButton type="submit" :disabled="fromMs === null || !!rangeError" :loading="busy.has('range')">Backfill this range</VxButton>
