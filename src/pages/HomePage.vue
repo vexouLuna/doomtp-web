@@ -99,7 +99,9 @@ const START = [
 .card:hover { border-color: var(--vx-accent); color: inherit; }
 .card b { color: var(--vx-ink); }
 .chan-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 8px; min-width: 0; }
-.chan-name { flex: 1 1 8rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A small basis, so the name ellipsizes beside a wide tier chip ("moderator") on the narrowest cards instead of
+   pushing it onto a second line; only two chips wrap there. */
+.chan-name { flex: 1 1 4rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; flex-shrink: 0; }
 .small { font-size: 12px; }
 code { font-family: var(--vx-font-mono); }
