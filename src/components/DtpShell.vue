@@ -1,8 +1,8 @@
 <script setup lang="ts">
 // Every page's frame: the shared shell with dtp's nav, Manage lives in the account menu
 // (the Manage bar itself is on the Manage pages, ManageShell), and the bot's version and default sign in the footer.
-import { VxSiteFooter, VxSiteShell } from '@vex/ui'
-import type { NavItem } from '@vex/ui'
+import { VxNavBar, VxSiteFooter, VxSiteShell } from '@vex/ui'
+import type { NavItem, NavLink } from '@vex/ui'
 import { useAccount } from '@vex/ui/account'
 import { computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -15,15 +15,21 @@ withDefaults(defineProps<{ sky?: 'full' | 'dim' | 'off' }>(), { sky: 'full' })
 const account = useAccount()
 const route = useRoute()
 
-// RouterLink marks only an exact match, so Channels is set current by hand to stay lit on a channel's own page.
+// RouterLink marks only an exact match, so Docs and Channels are set current by hand to stay lit on their sub-pages.
+// The four docs pages sit under one Docs item, so the top bar fits a phone; the docs bar below the header links them.
 const nav = computed<NavItem[]>(() => [
-  { label: 'Features', to: '/docs/features' },
-  { label: 'Commands', to: '/docs/commands' },
-  { label: 'Language', to: '/docs/language' },
-  { label: 'API', to: '/docs/api' },
+  { label: 'Docs', to: '/docs/features', current: route.path.startsWith('/docs/') },
   { label: 'Channels', to: '/channels', current: route.path.startsWith('/channels') },
   { label: 'Stats', to: '/stats' },
 ])
+const docs = computed<NavLink[]>(() =>
+  [
+    { label: 'Features', to: '/docs/features' },
+    { label: 'Commands', to: '/docs/commands' },
+    { label: 'Language', to: '/docs/language' },
+    { label: 'API', to: '/docs/api' },
+  ].map((l) => ({ ...l, current: route.path === l.to })),
+)
 
 onMounted(() => {
   loadSite()
@@ -42,6 +48,7 @@ watch(
 <template>
   <VxSiteShell site="dtp" :nav="nav" :sky="sky">
     <template #account><AccountMenu /></template>
+    <VxNavBar v-if="route.path.startsWith('/docs/')" :links="docs" label="Docs" title="Docs" />
     <slot></slot>
     <template #footer>
       <VxSiteFooter>

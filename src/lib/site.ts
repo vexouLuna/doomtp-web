@@ -20,5 +20,16 @@ export function loadSite(): Promise<Site | null> {
   return loading
 }
 
+/** The bot's own Twitch channel, where a broadcaster types join. */
+// shortcut: /site doesn't name the bot's own login yet; read it from there once doomtp-bot adds it.
+export const BOT_CHANNEL = 'doomtopyramidsbot'
+
+/** What each channel tier means, for the tier chips (the tiers table on the features page has more). */
+export const TIERS: Record<string, string> = {
+  basic: 'Basic: the bot reads chat and replies. Comes with joining',
+  moderator: 'Moderator: the broadcaster modded the bot, for follow events, moderation detail and higher send limits',
+  full: 'Full: the broadcaster connected the bot, for channel points, sub and cheer events and the chat bot badge',
+}
+
 /** The bot's default command sign, or its long-standing default while /site loads. */
 export const defaultSign = () => site.info?.default_prefix ?? '🏜'

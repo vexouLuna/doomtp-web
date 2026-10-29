@@ -125,7 +125,7 @@ const idOf = (key: string) => key.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g,
   flex: none; width: 4.2em; text-align: center; font: 600 11px/20px var(--vx-font-mono);
   border-radius: 4px; border: 1px solid currentColor; color: var(--vx-muted);
 }
-.method[data-method='GET'] { color: #8ab4f8; }
+.method[data-method='GET'] { color: var(--vx-info); }
 .method[data-method='POST'] { color: var(--vx-ok); }
 .method[data-method='PUT'], .method[data-method='PATCH'] { color: var(--vx-warn); }
 .method[data-method='DELETE'] { color: var(--vx-bad); }

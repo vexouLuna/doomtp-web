@@ -13,6 +13,7 @@ import StatsPanel from '@/components/StatsPanel.vue'
 import { manages } from '@/lib/access'
 import { api, statusOf } from '@/lib/api'
 import { channelRows } from '@/lib/commands'
+import { TIERS } from '@/lib/site'
 
 const props = defineProps<{ login: string }>()
 const route = useRoute()
@@ -57,7 +58,7 @@ const here = computed(() => data.value?.channel.active && data.value.channel.sta
         </div>
         <div class="chips">
           <VxChip k="sign">{{ data.channel.prefix }}</VxChip>
-          <VxChip k="tier">{{ data.channel.tier }}</VxChip>
+          <VxChip k="tier" :title="TIERS[data.channel.tier]">{{ data.channel.tier }}</VxChip>
           <VxChip :tone="here ? 'ok' : 'bad'">{{ data.channel.status }}</VxChip>
         </div>
         <VxTabs v-model="tab" :options="TABS" label="Channel sections" class="tabs" />

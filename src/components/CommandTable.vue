@@ -1,9 +1,9 @@
 <script setup lang="ts">
 // The searchable command table shared by the command reference and the channel pages. One line per command;
 // clicking it opens the details underneath (arguments, cooldowns, examples, a custom command's body).
-// On a phone the columns stack inside each row instead of being dropped. The Manage pages add their controls to each
+// The module is its group's header, not a column. On a phone the columns stack inside each row instead of being dropped. The Manage pages add their controls to each
 // line (the `actions` slot), a note under the summary (`note`) and more details (`detail`).
-import { VxButton, VxChip, VxInput } from '@vex/ui'
+import { VxButton, VxChip, VxInput, VxSwitch } from '@vex/ui'
 import { computed, ref, useSlots } from 'vue'
 import { type CommandRow, filterRows, nameLine } from '@/lib/commands'
 import ChatLine from './ChatLine.vue'
@@ -15,7 +15,13 @@ const props = withDefaults(
 
 const slots = useSlots()
 const query = ref('')
-const shown = computed(() => filterRows(props.rows, query.value))
+// A pack's internal helpers can't be typed in chat, so they stay out of the way until asked for.
+const showInternal = ref(false)
+const internalCount = computed(() => props.rows.filter((r) => r.internal).length)
+const visible = computed(() => (showInternal.value ? props.rows : props.rows.filter((r) => !r.internal)))
+const shown = computed(() => filterRows(visible.value, query.value))
+/** Internal commands the search would find if they were shown, so an empty result can say so. */
+const hiddenMatches = computed(() => (showInternal.value ? 0 : filterRows(props.rows, query.value).length - shown.value.length))
 const count = computed(() => {
   const n = shown.value.length
   return `${n} ${n === 1 ? props.noun.replace(/s$/, '') : props.noun}`
@@ -52,17 +58,19 @@ function toggle(key: string) {
         type="search"
         clearable
         class="search"
-        placeholder="Search by name, module, author or text…"
+        :placeholder="`Filter ${noun}…`"
+        :aria-label="`Filter ${noun} by name, module, author or text`"
         @keydown.esc="query = ''"
       />
       <span class="vx-muted vx-mono count" aria-live="polite">{{ count }}</span>
+      <VxSwitch v-if="internalCount" v-model="showInternal" :label="`Show internal (${internalCount})`" class="internal-toggle" />
       <VxButton size="sm" :disabled="!!query" @click="foldAll">{{ allFolded ? 'Expand all' : 'Collapse all' }}</VxButton>
     </div>
 
     <div class="table vx-panel" role="table" :aria-label="`${noun}, ${count}`">
       <div class="line head" role="row">
         <div class="row vx-eyebrow">
-          <span role="columnheader">Command</span><span role="columnheader">Module</span>
+          <span role="columnheader">Command</span>
           <span role="columnheader">Needs</span><span role="columnheader">What it does</span>
         </div>
         <span v-if="slots.actions" class="actions vx-eyebrow" role="columnheader">{{ actionsLabel }}</span>
@@ -90,7 +98,6 @@ function toggle(key: string) {
             @click="toggle(row.key)"
           >
             <ChatLine class="name" :class="{ internal: row.internal }" role="cell" :lines="nameLine(row, sign)" :sign="sign" signature />
-            <span class="vx-muted module" role="cell">{{ row.module }}</span>
             <span role="cell">
               <VxChip v-if="row.internal" tone="warn" class="tag-internal" title="Only this pack's own commands call it; chat can't type it">⚙ internal</VxChip>
               <VxChip v-else :tone="row.role === 'everyone' ? 'ok' : 'accent'">{{ row.role }}</VxChip>
@@ -161,19 +168,27 @@ function toggle(key: string) {
       </div>
       </template>
       </template>
-      <p v-if="!shown.length" class="vx-muted empty">Nothing matches that.</p>
+      <p v-if="!shown.length" class="vx-muted empty">
+        <template v-if="query">No {{ noun }} match <q>{{ query }}</q>. The filter looks at names, modules, authors and text.</template>
+        <template v-else>Every one of these is internal to its pack.</template>
+        <template v-if="hiddenMatches">
+          {{ hiddenMatches }} internal {{ hiddenMatches === 1 ? 'one does' : 'ones do' }}:
+          <VxButton size="sm" variant="ghost" @click="showInternal = true">Show internal</VxButton>
+        </template>
+      </p>
     </div>
   </div>
 </template>
 
 <style scoped>
-.filters { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
-.filters .search { flex: 1; min-width: 0; max-width: none; margin: 0; }
+.filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; }
+.internal-toggle { white-space: nowrap; }
+.filters .search { flex: 1 1 12rem; min-width: 0; max-width: none; margin: 0; }
 .count { font-size: 12px; white-space: nowrap; }
 .table { overflow: hidden; }
 .row {
   display: grid;
-  grid-template-columns: minmax(12rem, 32%) 7rem 8rem minmax(0, 1fr);
+  grid-template-columns: minmax(12rem, 32%) 8rem minmax(0, 1fr);
   gap: 12px;
   align-items: baseline;
   width: 100%;
@@ -191,23 +206,22 @@ function toggle(key: string) {
 /* One width for every line, so the columns to its left line up. */
 .actions { flex: none; width: var(--cmd-actions, 9rem); display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 4px 14px 4px 0; }
 button.row { cursor: pointer; }
-.line:hover, .is-open > .line { background: rgb(170 170 170 / 0.07); }
+.line:hover, .is-open > .line { background: var(--vx-hover); }
 .head .row, .head .actions { font-size: 11px; }
 .head:hover { background: none; }
 .note { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .note:empty { display: none; }
 /* Beats the pages' inline-code pill (.doc code): the name is the row, not a snippet in text. */
 .name { font-family: var(--vx-font-mono); font-size: 13px; overflow-wrap: anywhere; padding: 0; background: none; border: 0; }
-.module { font-size: 13px; }
 .name.internal { color: var(--vx-muted); font-style: italic; }
 /* Two tags that must not blur together: a rank is a solid pill (green for everyone, accent for the rest); an
    internal command is amber, dashed and gear-marked, because nobody can type it. */
 .tag-internal { border-style: dashed; background: none; }
 .group {
   display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 14px; cursor: pointer;
-  background: rgb(255 255 255 / 0.035); border: 0; border-bottom: 1px solid var(--vx-line); color: var(--vx-ink); font: inherit; text-align: left;
+  background: var(--vx-hover-faint); border: 0; border-bottom: 1px solid var(--vx-line); color: var(--vx-ink); font: inherit; text-align: left;
 }
-.group:hover { background: rgb(255 255 255 / 0.07); }
+.group:hover { background: var(--vx-selected); }
 .chev { width: 1em; color: var(--vx-accent); }
 .gname { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; }
 .gcount { font-size: 11px; }
@@ -230,8 +244,7 @@ button.row { cursor: pointer; }
   .head { display: none; }
   .actions { width: auto; flex-direction: column; align-items: flex-end; justify-content: center; gap: 4px; padding-left: 4px; }
   .name { grid-column: 1; grid-row: 1; }
-  .row > :nth-child(3) { grid-column: 2; grid-row: 1; }
-  .module { grid-column: 1 / -1; grid-row: 2; font-size: 12px; }
-  .summary { grid-column: 1 / -1; grid-row: 3; font-size: 13px; }
+  .row > :nth-child(2) { grid-column: 2; grid-row: 1; }
+  .summary { grid-column: 1 / -1; grid-row: 2; font-size: 13px; }
 }
 </style>
