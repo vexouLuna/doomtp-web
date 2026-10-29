@@ -7,7 +7,7 @@ import Cmd from '@/components/Cmd.vue'
 import DtpShell from '@/components/DtpShell.vue'
 import StatsPanel from '@/components/StatsPanel.vue'
 import { api } from '@/lib/api'
-import { defaultSign, loadSite, site } from '@/lib/site'
+import { BOT_CHANNEL, TIERS, defaultSign, loadSite, site } from '@/lib/site'
 
 const sign = computed(defaultSign)
 const tries = computed(() => [`${sign.value}ping`, `${sign.value}random 1-100 | echo you rolled {_1}!`, `${sign.value}help`])
@@ -33,6 +33,10 @@ const START = [
         <p class="vx-muted lead">
           Commands pipe into each other, anyone can build new ones from the pieces, and every message is logged and
           searchable.
+        </p>
+        <p class="join">
+          Add it to your channel: type <Cmd t="join" :sign="sign" /> in
+          <a :href="`https://www.twitch.tv/${BOT_CHANNEL}`" target="_blank" rel="noopener">#{{ BOT_CHANNEL }}</a>
         </p>
       </div>
       <div class="try vx-panel">
@@ -69,13 +73,13 @@ const START = [
     </div>
     <p v-else-if="!site.info.channels.length" class="vx-muted">
       The bot hasn't joined any channels yet. A broadcaster can type <Cmd t="join" :sign="sign" /> in
-      the bot's own chat.
+      <a :href="`https://www.twitch.tv/${BOT_CHANNEL}`" target="_blank" rel="noopener">#{{ BOT_CHANNEL }}</a>.
     </p>
     <div v-else class="cards">
       <RouterLink v-for="ch in site.info.channels" :key="ch.login" :to="`/channels/${ch.login}`" class="card chan vx-panel">
         <div class="chan-top">
           <b class="chan-name" :title="`#${ch.login}`">#{{ ch.login }}</b>
-          <VxChip :tone="ch.tier === 'full' ? 'ok' : 'default'">{{ ch.tier }}</VxChip>
+          <VxChip :tone="ch.tier === 'full' ? 'ok' : 'default'" :title="TIERS[ch.tier]">{{ ch.tier }}</VxChip>
           <VxChip v-if="ch.read_only" tone="warn" title="Bot speaks: off. It keeps logging but never sends a message here" class="ro"><span class="ell">Bot speaks: off</span></VxChip>
         </div>
         <div class="vx-muted small vx-mono">sign <code>{{ ch.prefix }}</code></div>
@@ -88,6 +92,7 @@ const START = [
 .hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 28px; align-items: center; }
 .hero h1 { font-size: 30px; margin: 8px 0 12px; }
 .lead { max-width: 34rem; margin: 0; }
+.join { margin: 12px 0 0; }
 .try { padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .try p { margin: 0; }
 .sec { font-size: 22px; margin: 36px 0 14px; }

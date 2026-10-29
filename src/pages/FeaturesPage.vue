@@ -6,7 +6,7 @@ import ChatLine from '@/components/ChatLine.vue'
 import Cmd from '@/components/Cmd.vue'
 import DtpShell from '@/components/DtpShell.vue'
 import { api } from '@/lib/api'
-import { defaultSign } from '@/lib/site'
+import { BOT_CHANNEL, defaultSign } from '@/lib/site'
 
 const p = computed(defaultSign)
 const { data: roles } = useResource(() => api.roles())
@@ -389,8 +389,10 @@ function roleSource(name: string): string {
 
       <h2 id="channels" class="vx-display">Channels and onboarding</h2>
       <p>
-        A broadcaster types <Cmd t="join" /> in the bot's own chat, and the bot starts reading and replying in theirs. That
-        needs no authorization. More becomes possible as trust grows:
+        Add it to your channel: type <Cmd t="join" /> in
+        <a :href="`https://www.twitch.tv/${BOT_CHANNEL}`" target="_blank" rel="noopener">#{{ BOT_CHANNEL }}</a>.
+        The bot then starts reading and replying in yours, which needs no authorization. More becomes possible as trust
+        grows:
       </p>
       <div class="table-scroll">
         <table class="vx-table">

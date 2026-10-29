@@ -7,7 +7,7 @@ import '@vex/ui/platform.css'
 import { twitchUserLookup } from '@vex/platform-web/chat'
 import { signInTarget } from '@vex/platform-web'
 import { createPlatformUi } from '@vex/platform-web/vue'
-import { VxBuild, useToast } from '@vex/ui'
+import { VxBuild, syncDocumentTitle, useToast } from '@vex/ui'
 import { createApp } from 'vue'
 import { createRouter, createWebHistory, RouterLink } from 'vue-router'
 
@@ -21,29 +21,29 @@ import { ensure, session, setExpiredHandler, twitchLoginUrl } from './lib/sessio
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', component: () => import('./pages/HomePage.vue') },
-    { path: '/docs/features', component: () => import('./pages/FeaturesPage.vue') },
-    { path: '/docs/commands', component: () => import('./pages/CommandsPage.vue') },
-    { path: '/docs/language', component: () => import('./pages/LanguagePage.vue') },
-    { path: '/docs/api', component: () => import('./pages/ApiPage.vue') },
-    { path: '/stats', component: () => import('./pages/StatsPage.vue') },
-    { path: '/channels', component: () => import('./pages/ChannelsPage.vue') },
-    { path: '/channels/:login', component: () => import('./pages/ChannelPage.vue'), props: true },
-    { path: '/explain/:token', component: () => import('./pages/ExplainPage.vue'), props: true },
+    { path: '/', component: () => import('./pages/HomePage.vue'), meta: { title: 'Home' } },
+    { path: '/docs/features', component: () => import('./pages/FeaturesPage.vue'), meta: { title: 'Features' } },
+    { path: '/docs/commands', component: () => import('./pages/CommandsPage.vue'), meta: { title: 'Commands' } },
+    { path: '/docs/language', component: () => import('./pages/LanguagePage.vue'), meta: { title: 'Language' } },
+    { path: '/docs/api', component: () => import('./pages/ApiPage.vue'), meta: { title: 'API' } },
+    { path: '/stats', component: () => import('./pages/StatsPage.vue'), meta: { title: 'Stats' } },
+    { path: '/channels', component: () => import('./pages/ChannelsPage.vue'), meta: { title: 'Channels' } },
+    { path: '/channels/:login', component: () => import('./pages/ChannelPage.vue'), props: true, meta: { title: 'Channel' } },
+    { path: '/explain/:token', component: () => import('./pages/ExplainPage.vue'), props: true, meta: { title: 'Explain report' } },
     // Manage. Every page needs a session (see src/lib/session.ts); what each shows depends on its rank.
-    { path: '/manage', component: () => import('./pages/manage/OverviewPage.vue') },
-    { path: '/manage/me', component: () => import('./pages/manage/MePage.vue') },
-    { path: '/manage/channels/:login', component: () => import('./pages/manage/ChannelPage.vue'), props: true },
-    { path: '/manage/explain', component: () => import('./pages/manage/ExplainPage.vue') },
-    { path: '/manage/jobs', component: () => import('./pages/manage/JobsPage.vue') },
-    { path: '/manage/jobs/:id(\\d+)', component: () => import('./pages/manage/JobPage.vue'), props: true },
-    { path: '/manage/audit', component: () => import('./pages/manage/AuditPage.vue') },
-    { path: '/manage/bot', component: () => import('./pages/manage/BotPage.vue') },
+    { path: '/manage', component: () => import('./pages/manage/OverviewPage.vue'), meta: { title: 'Manage' } },
+    { path: '/manage/me', component: () => import('./pages/manage/MePage.vue'), meta: { title: 'Me · Manage' } },
+    { path: '/manage/channels/:login', component: () => import('./pages/manage/ChannelPage.vue'), props: true, meta: { title: 'Channel · Manage' } },
+    { path: '/manage/explain', component: () => import('./pages/manage/ExplainPage.vue'), meta: { title: 'Explain · Manage' } },
+    { path: '/manage/jobs', component: () => import('./pages/manage/JobsPage.vue'), meta: { title: 'Jobs · Manage' } },
+    { path: '/manage/jobs/:id(\\d+)', component: () => import('./pages/manage/JobPage.vue'), props: true, meta: { title: 'Job · Manage' } },
+    { path: '/manage/audit', component: () => import('./pages/manage/AuditPage.vue'), meta: { title: 'Audit · Manage' } },
+    { path: '/manage/bot', component: () => import('./pages/manage/BotPage.vue'), meta: { title: 'Bot · Manage' } },
     // The sign-in page: the bot's Twitch sign-in lands here with ?error=, and the admin password lives here.
-    { path: '/admin/login', component: () => import('./pages/admin/AdminLoginPage.vue'), meta: { public: true } },
+    { path: '/admin/login', component: () => import('./pages/admin/AdminLoginPage.vue'), meta: { public: true, title: 'Sign in' } },
     // The old admin area, for links and bookmarks already out there.
     { path: '/admin/:rest(.*)*', redirect: (to) => ({ path: `/manage${to.path.slice('/admin'.length)}`, query: to.query, hash: to.hash }) },
-    { path: '/:pathMatch(.*)*', component: () => import('./pages/NotFoundPage.vue') },
+    { path: '/:pathMatch(.*)*', component: () => import('./pages/NotFoundPage.vue'), meta: { title: 'Not found' } },
   ],
   scrollBehavior: (to, from, saved) => {
     if (saved) return saved
@@ -52,6 +52,8 @@ const router = createRouter({
     return to.path !== from.path ? { top: 0 } : undefined
   },
 })
+
+syncDocumentTitle(router, 'doomtp-bot')
 
 // A session that ends mid-use sends the visitor to the sign-in page, which says why and brings them back.
 setExpiredHandler(() => {

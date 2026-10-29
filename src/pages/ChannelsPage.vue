@@ -4,7 +4,7 @@ import { VxButton, VxCallout, VxChip, VxSkeleton } from '@vex/ui'
 import { usePoll } from '@vex/ui/utils'
 import DtpShell from '@/components/DtpShell.vue'
 import { channelCounts, yesNo } from '@/lib/channelCounts'
-import { loadSite, site } from '@/lib/site'
+import { TIERS, loadSite, site } from '@/lib/site'
 
 // The bot recounts every 30 seconds, so this asks no faster.
 const { data: counts } = usePoll(channelCounts, 30_000)
@@ -36,7 +36,7 @@ const since = (at: number | null | undefined) => (at ? new Date(at).toLocaleDate
           <tbody>
             <tr v-for="ch in site.info.channels" :key="ch.login">
               <td class="name"><RouterLink :to="`/channels/${ch.login}`" :title="`#${ch.login}`">#{{ ch.login }}</RouterLink></td>
-              <td><VxChip :tone="ch.tier === 'full' ? 'ok' : 'default'">{{ ch.tier }}</VxChip></td>
+              <td><VxChip :tone="ch.tier === 'full' ? 'ok' : 'default'" :title="TIERS[ch.tier]">{{ ch.tier }}</VxChip></td>
               <td class="vx-mono">{{ ch.prefix }}</td>
               <td>
                 <VxChip v-if="ch.read_only" tone="warn" title="It keeps logging but never sends a message here">off</VxChip>
