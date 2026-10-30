@@ -17,9 +17,9 @@
 }
 /* ---------- Command text (components/ChatLine.vue) ----------
    The bot's lexer token classes, in the colours its editor gives them (web-editor/src/theme.js), so a line
-   looks close to the editor on the page. Names and paths take the library's info colour; the operator pink has no
-   token in @vex/ui, so it stays the editor's. */
-:root { --dtb-op: #ff7ab2; --dtb-var: var(--vx-info); --dtb-path: color-mix(in srgb, var(--vx-info) 65%, var(--vx-muted)); }
+   looks close to the editor on the page. Names and paths take the library's info colour, operators its corruption
+   pink (the editor's own). */
+:root { --dtb-op: var(--vx-corruption); --dtb-var: var(--vx-info); --dtb-path: color-mix(in srgb, var(--vx-info) 65%, var(--vx-muted)); }
 .dtb { font-family: var(--vx-font-mono); }
 .dtb-prefix, .dtb-command { color: var(--vx-accent); font-weight: 600; }
 .dtb-prefix { font-synthesis: none; }
