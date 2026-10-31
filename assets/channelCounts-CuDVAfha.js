@@ -1,0 +1,1 @@
+import{a as c}from"./index-epsRmdwj.js";import{l as i}from"./DtpShell-DlfW00o9.js";async function r(){const a=(await i())?.channels.map(n=>n.login)??[],t=await Promise.all(a.map(n=>c.channelStats(n).catch(()=>null)));return Object.fromEntries(a.map((n,s)=>[n,t[s]]))}const m=o=>o===void 0?"—":o?"yes":"no";export{r as c,m as y};

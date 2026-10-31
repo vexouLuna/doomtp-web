@@ -1,0 +1,1 @@
+import{S as i,$ as u,a1 as f}from"./index-epsRmdwj.js";function w(t){const n=f(),a=u(new Set);async function e(o,r,s){a.add(o);try{return await r(),n.show(s),await t(),!0}catch(c){return n.show(i(c),{kind:"error",duration:5e3}),!1}finally{a.delete(o)}}return{busy:a,act:e}}const l=t=>t?"on":"off";export{l as o,w as u};

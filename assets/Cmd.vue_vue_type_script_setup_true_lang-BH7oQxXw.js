@@ -1,0 +1,1 @@
+import{d as o}from"./DtpShell-DlfW00o9.js";import{C as t}from"./ChatLine-C4H3ChES.js";import{d as a,o as i,c as r,k as c}from"./index-epsRmdwj.js";const f=a({__name:"Cmd",props:{t:{},sign:{}},setup(n){const e=n,s=c(()=>e.sign??o());return(m,p)=>(i(),r(t,{lines:`${s.value}${n.t}`,sign:s.value},null,8,["lines","sign"]))}});export{f as _};
