@@ -19,7 +19,7 @@ const { data: rows, error, reload } = useResource(async () => {
 
 <template>
   <DtpShell>
-    <div class="doc">
+    <div class="doc vx-wrap-code">
       <h1 class="vx-display">Command reference</h1>
       <p class="vx-muted">
         Every built-in command the bot has, and the parts of the language that sit between them

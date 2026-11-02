@@ -30,7 +30,7 @@ const from = (inv: ExplainInvocation) => (inv.owner ? `${inv.source} by ${inv.ow
 
       <h2 class="vx-display">Commands</h2>
       <div class="table-scroll">
-        <table class="vx-table">
+        <table class="vx-table is-stack">
           <thead>
             <tr><th>#</th><th>Command</th><th>From</th><th>Needs</th><th>Allowed</th><th>Cooldown</th><th>Input</th><th>Placeholders</th></tr>
           </thead>
@@ -55,7 +55,7 @@ const from = (inv: ExplainInvocation) => (inv.owner ? `${inv.source} by ${inv.ow
       <template v-if="report.stores?.length">
         <h2 class="vx-display">Variable writes</h2>
         <div class="table-scroll">
-          <table class="vx-table">
+          <table class="vx-table is-stack">
             <thead><tr><th>Variable</th><th>How</th><th>Allowed</th></tr></thead>
             <tbody>
               <tr v-for="s in report.stores" :key="s.variable">

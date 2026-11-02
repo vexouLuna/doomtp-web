@@ -66,7 +66,7 @@ const limits = computed(() => {
   <DtpShell>
     <div class="vx-toc-layout">
     <VxToc />
-    <article class="doc">
+    <article class="doc vx-wrap-code">
       <h1 class="vx-display">Language reference</h1>
       <p class="vx-muted">
         <template v-if="data">Version {{ data.language.syntax_version }}. </template>What a chat line can hold and how
@@ -121,7 +121,7 @@ const limits = computed(() => {
             <template v-for="(root, i) in data.language.roots" :key="root"><template v-if="i"> · </template><code>{{ root }}</code></template>
           </p>
           <div class="table-scroll">
-            <table class="vx-table">
+            <table class="vx-table is-stack">
               <thead><tr><th>Reference</th><th>What it is</th></tr></thead>
               <tbody>
                 <tr v-for="[ref, what] in REFERENCES" :key="ref">
@@ -139,7 +139,7 @@ const limits = computed(() => {
             <code>??</code> fallback.
           </p>
           <div class="table-scroll">
-            <table class="vx-table">
+            <table class="vx-table is-stack">
               <thead><tr><th>Reference</th><th>What it holds</th></tr></thead>
               <tbody>
                 <template v-for="(fields, root) in data.language.bot_field_docs" :key="root">
@@ -169,7 +169,7 @@ const limits = computed(() => {
               <template v-if="e.match"> Narrow it with <code>{{ e.match }}</code>.</template>
             </p>
             <div v-if="e.variables.length" class="table-scroll">
-              <table class="vx-table">
+              <table class="vx-table is-stack">
                 <thead><tr><th>Variable</th><th>What it holds</th></tr></thead>
                 <tbody>
                   <tr v-for="v in e.variables" :key="v.name">
@@ -203,7 +203,7 @@ const limits = computed(() => {
 
       <h2 class="vx-display">Exit codes</h2>
       <div class="table-scroll">
-        <table class="vx-table">
+        <table class="vx-table is-stack">
           <thead><tr><th>Code</th><th>Meaning</th><th>Sent to chat?</th></tr></thead>
           <tbody>
             <tr v-for="[code, meaning, sent] in EXIT_CODES" :key="code"><td class="vx-tabular">{{ code }}</td><td>{{ meaning }}</td><td>{{ sent }}</td></tr>
@@ -214,7 +214,7 @@ const limits = computed(() => {
       <template v-if="data">
         <h2 class="vx-display">Limits</h2>
         <div class="table-scroll">
-          <table class="vx-table">
+          <table class="vx-table is-stack">
             <thead><tr><th>Limit</th><th>Value</th></tr></thead>
             <tbody>
               <tr v-for="[name, value] in limits" :key="name"><td>{{ name }}</td><td class="vx-tabular">{{ value }}</td></tr>
@@ -237,7 +237,7 @@ const limits = computed(() => {
           </figure>
           <details class="text">
             <summary>The same thing as text</summary>
-            <pre class="vx-code grammar">{{ data.grammar.text }}</pre>
+            <pre class="vx-code is-scroll">{{ data.grammar.text }}</pre>
           </details>
         </template>
       </template>

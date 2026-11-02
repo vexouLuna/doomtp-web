@@ -14,7 +14,7 @@ const since = (at: number | null | undefined) => (at ? new Date(at).toLocaleDate
 
 <template>
   <DtpShell>
-    <div class="doc">
+    <div class="doc vx-wrap-code">
       <h1 class="vx-display">Channels</h1>
       <p class="vx-muted">
         Where the bot is, what it may do there, and how busy each channel was over the last day.
@@ -26,7 +26,7 @@ const since = (at: number | null | undefined) => (at ? new Date(at).toLocaleDate
       <VxSkeleton v-else-if="!site.info" h="160px" />
       <p v-else-if="!site.info.channels.length" class="vx-muted">The bot hasn't joined any channels yet.</p>
       <div v-else class="table-scroll">
-        <table class="vx-table">
+        <table class="vx-table is-stack">
           <thead>
             <tr>
               <th>Channel</th><th>Tier</th><th>Sign</th><th>Bot speaks</th><th>Moderates</th><th>Public log</th>
