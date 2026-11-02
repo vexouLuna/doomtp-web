@@ -5,6 +5,7 @@ import { computed, reactive, shallowRef, watch } from 'vue'
 import { can } from '@/lib/access'
 import { admin, type Channel, type ChannelPatch } from '@/lib/admin'
 import { errorText } from '@vex/platform-web'
+import { syncForm } from '@/lib/syncForm'
 
 const props = defineProps<{ channel: Channel; roles: string[] }>()
 const emit = defineEmits<{ saved: [channel: Channel] }>()
@@ -37,8 +38,10 @@ const saved = shallowRef<Form>(fromChannel(props.channel))
 watch(
   () => props.channel,
   (c) => {
-    saved.value = fromChannel(c)
-    Object.assign(form, saved.value)
+    const next = fromChannel(c)
+    // A reload (Check again, Rejoin) must not discard edits: only untouched fields follow the bot.
+    syncForm(form, saved.value, next)
+    saved.value = next
   },
 )
 
