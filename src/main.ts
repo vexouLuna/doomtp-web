@@ -22,6 +22,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', component: () => import('./pages/HomePage.vue'), meta: { title: 'Home' } },
+    { path: '/docs/start', component: () => import('./pages/GetStartedPage.vue'), meta: { title: 'Get started' } },
     { path: '/docs/features', component: () => import('./pages/FeaturesPage.vue'), meta: { title: 'Features' } },
     { path: '/docs/commands', component: () => import('./pages/CommandsPage.vue'), meta: { title: 'Commands' } },
     { path: '/docs/language', component: () => import('./pages/LanguagePage.vue'), meta: { title: 'Language' } },

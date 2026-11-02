@@ -58,4 +58,8 @@ onMounted(loadLexer)
   color: var(--vx-muted); background: var(--vx-surface-2); border: 1px solid var(--vx-line); border-radius: var(--vx-radius-sm);
 }
 .tools button:hover { color: var(--vx-ink); }
+/* On a phone the buttons go above the text instead of taking a third of its width. */
+@container vx-site (max-width: 600px) {
+  .codewrap pre { padding-right: 14px; padding-top: 34px; }
+}
 </style>

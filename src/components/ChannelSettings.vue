@@ -139,7 +139,7 @@ const ROLE_FIELDS: [keyof Form, string, string][] = [
         v-if="channel.public_log !== undefined"
         v-model="form.public_log"
         :disabled="!can('settings.public-log', channel.login)"
-        label="Public log: anyone may search the messages (off: moderators only)"
+        label="Public log: anyone may read and search the messages, removed ones included (off: moderators only)"
       />
       <p v-if="!can('settings.logging', channel.login)" class="vx-muted locked">Only the broadcaster turns the chat log on or off.</p>
       <h3 class="vx-eyebrow">Automod</h3>

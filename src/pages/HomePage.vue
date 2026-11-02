@@ -7,7 +7,8 @@ import Cmd from '@/components/Cmd.vue'
 import DtpShell from '@/components/DtpShell.vue'
 import StatsPanel from '@/components/StatsPanel.vue'
 import { api } from '@/lib/api'
-import { BOT_CHANNEL, TIERS, defaultSign, loadSite, site } from '@/lib/site'
+import { CONNECT_URL } from '@/lib/session'
+import { TIERS, defaultSign, loadSite, site } from '@/lib/site'
 
 const sign = computed(defaultSign)
 const tries = computed(() => [`${sign.value}ping`, `${sign.value}random 1-100 | echo you rolled {_1}!`, `${sign.value}help`])
@@ -31,13 +32,13 @@ const START = [
         <div class="vx-eyebrow">doomtp-bot<template v-if="site.info"> · v{{ site.info.version }}</template></div>
         <h1 class="vx-display">A Twitch chat bot with a composable command language.</h1>
         <p class="vx-muted lead">
-          Commands pipe into each other, anyone can build new ones from the pieces, and every message is logged and
-          searchable.
+          Shoutouts, quotes, death counters, timers and channel-point rewards in your chat, plus commands your mods can
+          build themselves. Every message is logged and searchable.
         </p>
-        <p class="join">
-          Add it to your channel: type <Cmd t="join" :sign="sign" /> in
-          <a :href="`https://www.twitch.tv/${BOT_CHANNEL}`" target="_blank" rel="noopener">#{{ BOT_CHANNEL }}</a>
-        </p>
+        <div class="join">
+          <VxButton :href="CONNECT_URL" variant="primary">Add it to your channel</VxButton>
+          <VxButton to="/docs/start">How it works</VxButton>
+        </div>
       </div>
       <div class="try vx-panel">
         <div class="vx-eyebrow">Try it in chat</div>
@@ -72,8 +73,7 @@ const START = [
       <VxSkeleton v-for="i in 3" :key="i" h="64px" />
     </div>
     <p v-else-if="!site.info.channels.length" class="vx-muted">
-      The bot hasn't joined any channels yet. A broadcaster can type <Cmd t="join" :sign="sign" /> in
-      <a :href="`https://www.twitch.tv/${BOT_CHANNEL}`" target="_blank" rel="noopener">#{{ BOT_CHANNEL }}</a>.
+      The bot hasn't joined any channels yet. A broadcaster can <a :href="CONNECT_URL">connect their channel</a>.
     </p>
     <div v-else class="cards">
       <RouterLink v-for="ch in site.info.channels" :key="ch.login" :to="`/channels/${ch.login}`" class="card chan vx-panel">
@@ -92,7 +92,7 @@ const START = [
 .hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 28px; align-items: center; }
 .hero h1 { font-size: 30px; margin: 8px 0 12px; }
 .lead { max-width: 34rem; margin: 0; }
-.join { margin: 12px 0 0; }
+.join { margin: 16px 0 0; display: flex; flex-wrap: wrap; gap: 10px; }
 .try { padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .try p { margin: 0; }
 .sec { font-size: 22px; margin: 36px 0 14px; }

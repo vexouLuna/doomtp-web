@@ -16,14 +16,15 @@ const account = useAccount()
 const route = useRoute()
 
 // RouterLink marks only an exact match, so Docs and Channels are set current by hand to stay lit on their sub-pages.
-// The four docs pages sit under one Docs item, so the top bar fits a phone; the docs bar below the header links them.
+// The docs pages sit under one Docs item, so the top bar fits a phone; the docs bar below the header links them.
 const nav = computed<NavItem[]>(() => [
-  { label: 'Docs', to: '/docs/features', current: route.path.startsWith('/docs/') },
+  { label: 'Docs', to: '/docs/start', current: route.path.startsWith('/docs/') },
   { label: 'Channels', to: '/channels', current: route.path.startsWith('/channels') },
   { label: 'Stats', to: '/stats' },
 ])
 const docs = computed<NavLink[]>(() =>
   [
+    { label: 'Get started', to: '/docs/start' },
     { label: 'Features', to: '/docs/features' },
     { label: 'Commands', to: '/docs/commands' },
     { label: 'Language', to: '/docs/language' },

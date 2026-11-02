@@ -36,17 +36,17 @@ const since = (at: number | null | undefined) => (at ? new Date(at).toLocaleDate
           <tbody>
             <tr v-for="ch in site.info.channels" :key="ch.login">
               <td class="name"><RouterLink :to="`/channels/${ch.login}`" :title="`#${ch.login}`">#{{ ch.login }}</RouterLink></td>
-              <td><VxChip :tone="ch.tier === 'full' ? 'ok' : 'default'" :title="TIERS[ch.tier]">{{ ch.tier }}</VxChip></td>
-              <td class="vx-mono">{{ ch.prefix }}</td>
-              <td>
+              <td data-label="Tier"><VxChip :tone="ch.tier === 'full' ? 'ok' : 'default'" :title="TIERS[ch.tier]">{{ ch.tier }}</VxChip></td>
+              <td class="vx-mono" data-label="Sign">{{ ch.prefix }}</td>
+              <td data-label="Bot speaks">
                 <VxChip v-if="ch.read_only" tone="warn" title="It keeps logging but never sends a message here">off</VxChip>
                 <template v-else>{{ ch.read_only === undefined ? '—' : 'yes' }}</template>
               </td>
-              <td>{{ yesNo(ch.can_moderate) }}</td>
-              <td>{{ yesNo(ch.logs_public) }}</td>
-              <td class="nowrap">{{ since(ch.joined_at) }}</td>
-              <td class="num vx-mono">{{ n(counts?.[ch.login]?.messages_logged.day) }}</td>
-              <td class="num vx-mono">{{ n(counts?.[ch.login]?.runs_day.ok) }}</td>
+              <td data-label="Moderates">{{ yesNo(ch.can_moderate) }}</td>
+              <td data-label="Public log">{{ yesNo(ch.logs_public) }}</td>
+              <td class="nowrap" data-label="Joined">{{ since(ch.joined_at) }}</td>
+              <td class="num vx-mono" data-label="Lines today">{{ n(counts?.[ch.login]?.messages_logged.day) }}</td>
+              <td class="num vx-mono" data-label="Runs today">{{ n(counts?.[ch.login]?.runs_day.ok) }}</td>
             </tr>
           </tbody>
         </table>
@@ -56,6 +56,9 @@ const since = (at: number | null | undefined) => (at ? new Date(at).toLocaleDate
 </template>
 
 <style scoped>
+/* A data page: the table takes the full width, only the prose keeps the reading measure. */
+.doc { max-width: none; }
+.doc > p { max-width: 52rem; }
 .num { text-align: right; white-space: nowrap; }
 .nowrap { white-space: nowrap; }
 .name { max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
