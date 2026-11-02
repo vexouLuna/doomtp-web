@@ -15,7 +15,7 @@ const n = (value: number) => value.toLocaleString()
 
 <template>
   <DtpShell>
-    <div class="doc">
+    <div class="doc vx-wrap-code">
       <h1 class="vx-display">Right now</h1>
       <p class="vx-muted">The bot's counts, kept fresh while this page is open. It recounts every 30 seconds.</p>
       <StatsPanel v-if="stats" :counts="stats" :build="stats" />
@@ -25,7 +25,7 @@ const n = (value: number) => value.toLocaleString()
       <VxSkeleton v-if="!counts" h="120px" />
       <p v-else-if="!Object.keys(counts).length" class="vx-muted">The bot hasn't joined any channels yet.</p>
       <div v-else class="table-scroll">
-        <table class="vx-table">
+        <table class="vx-table is-stack">
           <thead>
             <tr>
               <th>Channel</th><th class="num">Lines, hour</th><th class="num">Lines, day</th>

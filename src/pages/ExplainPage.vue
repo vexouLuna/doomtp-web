@@ -14,7 +14,7 @@ const status = computed(() => statusOf(error.value))
 
 <template>
   <DtpShell>
-    <div class="doc">
+    <div class="doc vx-wrap-code">
       <h1 class="vx-display">What this would do</h1>
       <template v-if="status === 404">
         <p class="vx-muted">

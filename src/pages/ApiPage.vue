@@ -31,7 +31,7 @@ const idOf = (key: string) => key.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g,
   <DtpShell>
     <div class="vx-toc-layout">
     <VxToc headings="h2" />
-    <article class="doc api">
+    <article class="doc vx-wrap-code api">
       <h1 class="vx-display">API</h1>
       <p class="vx-muted">
         <template v-if="data?.version">doomtp-bot {{ data.version }}. </template>Everything here is JSON over HTTP on
@@ -80,7 +80,7 @@ const idOf = (key: string) => key.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g,
                   <template v-if="block.fields.length">
                     <h3>{{ block.title }}</h3>
                     <div class="table-scroll">
-                      <table class="vx-table">
+                      <table class="vx-table is-stack">
                         <tbody>
                           <tr v-for="f in block.fields" :key="f.in + f.name">
                             <td class="name"><code>{{ f.name }}</code><span v-if="f.required" class="req" title="required">*</span></td>

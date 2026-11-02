@@ -26,7 +26,7 @@ async function copy(text: string) {
 
 <template>
   <DtpShell>
-    <article class="doc start">
+    <article class="doc vx-wrap-code start">
       <h1 class="vx-display">Get started</h1>
       <p class="vx-muted">Connecting your channel puts the bot in your chat. Making it a moderator is optional, and then it is ready.</p>
 

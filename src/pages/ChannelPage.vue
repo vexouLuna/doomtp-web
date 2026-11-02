@@ -51,7 +51,7 @@ const here = computed(() => data.value?.channel.active && data.value.channel.sta
     </VxEmptyState>
     <VxLoadState v-else :error="error" :stale="!!data" :loading="!data" error-title="Couldn't load this channel" :error-text="errorText" @retry="reload">
       <template #loading><VxSkeleton w="40%" h="34px" /><VxSkeleton v-for="i in 5" :key="i" h="38px" /></template>
-      <div v-if="data" class="doc">
+      <div v-if="data" class="doc vx-wrap-code">
         <div class="title">
           <h1 class="vx-display">#{{ data.channel.login }}</h1>
           <VxButton v-if="manages(data.channel.login)" :to="`/manage/channels/${data.channel.login}`" size="sm">Manage</VxButton>

@@ -67,7 +67,7 @@ function roleSource(name: string): string {
   <DtpShell>
     <div class="vx-toc-layout">
     <VxToc />
-    <article class="doc">
+    <article class="doc vx-wrap-code">
       <h1 class="vx-display">Features</h1>
       <p class="vx-muted">
         What the bot does, how each part behaves, and where the limits are. Examples use
@@ -77,7 +77,7 @@ function roleSource(name: string): string {
       <h2 id="commands" class="vx-display">Commands and pipelines</h2>
       <p>A command is one step. Operators join steps into a line, and only the <em>last</em> result is sent to chat.</p>
       <div class="table-scroll">
-        <table class="vx-table">
+        <table class="vx-table is-stack">
           <thead><tr><th>Operator</th><th>Meaning</th><th>Example</th></tr></thead>
           <tbody>
             <tr><td><code>|</code></td><td>Pipe: the left result becomes the right command's input. Stops if the left fails.</td><td><ChatLine :lines="`${p}random 1-6 | echo you rolled {_1}`" :sign="p" /></td></tr>
@@ -101,7 +101,7 @@ function roleSource(name: string): string {
       <p>Roles are ranked. A command requires a role, and anyone whose rank reaches it may run the command.</p>
       <VxLoadState :loading="!roles" :rows="5" row-height="26px" margin="0 0 12px">
         <div v-if="roles" class="table-scroll">
-          <table class="vx-table">
+          <table class="vx-table is-stack">
             <thead><tr><th>Role</th><th>Rank</th><th>Comes from</th></tr></thead>
             <tbody>
               <tr v-for="r in roles.roles" :key="r.name"><td><code>{{ r.name }}</code></td><td class="vx-tabular">{{ r.rank }}</td><td>{{ roleSource(r.name) }}</td></tr>
@@ -157,7 +157,7 @@ function roleSource(name: string): string {
         block
       />
       <div class="table-scroll">
-        <table class="vx-table">
+        <table class="vx-table is-stack">
           <thead><tr><th>What</th><th>How</th></tr></thead>
           <tbody>
             <tr><td>Use your own</td><td>Immediately, anywhere the bot is: it's your personal alias.</td></tr>
@@ -210,7 +210,7 @@ function roleSource(name: string): string {
       </p>
       <p>This bot ships a <strong>starter</strong> pack of them, owned by the bot's own account:</p>
       <div class="table-scroll">
-        <table class="vx-table">
+        <table class="vx-table is-stack">
           <thead><tr><th>Command</th><th>What it does</th></tr></thead>
           <tbody>
             <tr><td><Cmd t="hug [user]" /></td><td>Hug someone, or the whole chat</td></tr>
@@ -230,7 +230,7 @@ function roleSource(name: string): string {
       <h2 id="variables" class="vx-display">Variables</h2>
       <p>Values the bot remembers, in seven namespaces:</p>
       <div class="table-scroll">
-        <table class="vx-table">
+        <table class="vx-table is-stack">
           <thead><tr><th>Namespace</th><th>Belongs to</th></tr></thead>
           <tbody>
             <tr><td><code>chatter.x</code></td><td>you, everywhere the bot is</td></tr>
@@ -404,7 +404,7 @@ function roleSource(name: string): string {
         answers with the same link.
       </p>
       <div class="table-scroll">
-        <table class="vx-table">
+        <table class="vx-table is-stack">
           <thead><tr><th>Tier</th><th>What unlocks it</th><th>What it adds</th></tr></thead>
           <tbody>
             <tr><td>basic</td><td>added without connecting: from Manage after signing in, or by a bot admin</td><td>reading chat, replying, commands, timers, crons, stream on/off</td></tr>
@@ -440,7 +440,7 @@ function roleSource(name: string): string {
 
       <h2 id="api" class="vx-display">API and admin</h2>
       <div class="table-scroll">
-        <table class="vx-table">
+        <table class="vx-table is-stack">
           <thead><tr><th>Endpoint</th><th>What it gives</th></tr></thead>
           <tbody>
             <tr><td><code>GET /api/v1/commands</code></td><td>every built-in with usage, parameters and examples</td></tr>
