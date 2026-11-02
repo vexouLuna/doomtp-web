@@ -76,17 +76,15 @@ const limits = computed(() => {
       <h2 id="try" class="vx-display">Try one</h2>
       <p>
         Type an expression and the bot tells you what it makes of it: colours as you type, the exact error a chat user
-        would get, and, once it parses, which command each name resolves to, what it would store and what it would
-        say. Nothing runs, and nothing is sent to chat.
+        would get, and, once it parses, which command each name resolves to and what it would store. Explain also
+        runs it, with every change thrown away, to show what it would say. Nothing is sent to chat.
       </p>
       <div class="editor">
-        <dtb-editor context="line" :prefix="p" explain :hint="example">
+        <!-- .attr: `prefix` is also a read-only DOM property (Element.prefix), which Vue would set instead. -->
+        <dtb-editor context="line" :prefix.attr="p" explain :hint="example">
           <textarea name="expr" rows="3" spellcheck="false" :value="example"></textarea>
         </dtb-editor>
       </div>
-      <p class="vx-muted small">
-        Without JavaScript this is an ordinary text box.
-      </p>
 
       <h2 class="vx-display">Shape of a line</h2>
       <ChatLine :lines="shape" :sign="p" block />
@@ -239,7 +237,7 @@ const limits = computed(() => {
           </figure>
           <details class="text">
             <summary>The same thing as text</summary>
-            <pre class="vx-code">{{ data.grammar.text }}</pre>
+            <pre class="vx-code grammar">{{ data.grammar.text }}</pre>
           </details>
         </template>
       </template>
@@ -249,7 +247,6 @@ const limits = computed(() => {
 </template>
 
 <style scoped>
-.small { font-size: 13px; }
 .list { line-height: 2; }
 .root td { background: var(--vx-surface-2); }
 .event h3 { margin-bottom: 4px; }

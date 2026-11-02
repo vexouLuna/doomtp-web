@@ -6,6 +6,7 @@ import ChatLine from '@/components/ChatLine.vue'
 import Cmd from '@/components/Cmd.vue'
 import DtpShell from '@/components/DtpShell.vue'
 import { api } from '@/lib/api'
+import { CONNECT_URL } from '@/lib/session'
 import { BOT_CHANNEL, defaultSign } from '@/lib/site'
 
 const p = computed(defaultSign)
@@ -361,6 +362,10 @@ function roleSource(name: string): string {
         chat clears are stored as events of their own.
       </p>
       <p>
+        The log on each channel's page is for moderators, or for anyone when the channel turns on its public log. It
+        shows removed messages too, on purpose: each is marked as removed and shows its reason until clicked.
+      </p>
+      <p>
         Coverage is recorded too: the log knows exactly when the bot was listening. If the bot was down, the gap can be
         filled from the public recent-messages service when a channel opts in, and anything that can't be proven complete
         is marked partial. <strong>Backfilled messages never run commands</strong>:
@@ -371,8 +376,9 @@ function roleSource(name: string): string {
       <h3>Searching it from chat</h3>
       <ChatLine :lines="lines('logsearch speedrun          # the newest message saying it, and how many more', 'logsearch @alice speedrun   # …from one chatter')" :sign="p" block />
       <p>
-        For moderators, unless a channel opens it up. Chat only ever sees what is still in chat: deleted messages, those
-        of chatters timed out or banned since, and the bot's own lines never come back this way.
+        For moderators, unless a channel opens it up. Searching from chat only finds what is still in chat: deleted
+        messages, those of chatters timed out or banned since, and the bot's own lines are left out of its answers.
+        They stay in the log itself, where the channel page shows them marked as removed.
       </p>
 
       <h2 id="quotes" class="vx-display">Quotes</h2>
@@ -389,27 +395,27 @@ function roleSource(name: string): string {
 
       <h2 id="channels" class="vx-display">Channels and onboarding</h2>
       <p>
-        Add it to your channel: type <Cmd t="join" /> in
-        <a :href="`https://www.twitch.tv/${BOT_CHANNEL}`" target="_blank" rel="noopener">#{{ BOT_CHANNEL }}</a>.
-        The bot then starts reading and replying in yours, which needs no authorization. More becomes possible as trust
-        grows:
+        <RouterLink to="/docs/start">Get started</RouterLink> has the steps. A broadcaster connects their channel at
+        <a :href="CONNECT_URL">/auth/connect</a> on this site, signing in to Twitch as the channel, and the bot joins.
+        Twitch asks whether they want to give the bot their channel point redemptions, subscriptions, cheers, raids
+        and stream title. They grant at least one and may refuse the rest: what they grant is what turns on, and the rest keeps
+        saying why it is off. It is taken back from <em>Connections</em> in their Twitch settings.
+        <Cmd t="join" /> in <a :href="`https://www.twitch.tv/${BOT_CHANNEL}`" target="_blank" rel="noopener">#{{ BOT_CHANNEL }}</a>
+        answers with the same link.
       </p>
       <div class="table-scroll">
         <table class="vx-table">
           <thead><tr><th>Tier</th><th>What unlocks it</th><th>What it adds</th></tr></thead>
           <tbody>
-            <tr><td>basic</td><td>nothing, just <Cmd t="join" /></td><td>reading chat, replying, commands, timers, crons, stream on/off</td></tr>
+            <tr><td>basic</td><td>added without connecting: from Manage after signing in, or by a bot admin</td><td>reading chat, replying, commands, timers, crons, stream on/off</td></tr>
             <tr><td>moderator</td><td>the broadcaster mods the bot</td><td>follow events, moderation detail, higher send limits, no slow mode</td></tr>
-            <tr><td>full</td><td>the broadcaster connects the bot</td><td>channel point redemptions, sub and cheer events, the chat bot badge</td></tr>
+            <tr><td>full</td><td>anything granted when connecting</td><td>channel point redemptions, sub and cheer events, raids, the stream title, the chat bot badge</td></tr>
           </tbody>
         </table>
       </div>
       <p>
-        The first two need nothing from the bot's owner. The third is a link the broadcaster follows once
-        (<a href="/auth/connect">/auth/connect</a> on this site), where Twitch asks whether they want to give the bot
-        their channel point redemptions, subscriptions and cheers. They can grant some and refuse the rest: what they
-        grant is what turns on, and the rest keeps saying why it is off. It is taken back the same way, from
-        <em>Connections</em> in their Twitch settings.
+        A channel's tier is the highest it has reached, and modding and granting are separate: a channel can be
+        <code>full</code> without the bot being a moderator there.
       </p>
       <p>
         The bot works out which tier it has by itself: it checks when it joins and again every hour, and that answer is

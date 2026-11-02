@@ -37,12 +37,12 @@ const n = (value: number) => value.toLocaleString()
             <tr v-for="(c, login) in counts" :key="login">
               <td class="name"><RouterLink :to="`/channels/${login}`" :title="`#${login}`">#{{ login }}</RouterLink></td>
               <template v-if="c">
-                <td class="num vx-mono">{{ n(c.messages_logged.hour) }}</td>
-                <td class="num vx-mono">{{ n(c.messages_logged.day) }}</td>
-                <td class="num vx-mono">{{ n(c.messages_sent.day) }}</td>
-                <td class="num vx-mono">{{ n(c.runs_day.ok) }}</td>
-                <td class="num vx-mono">{{ n(c.runs_day.failed) }}</td>
-                <td class="num vx-mono">{{ n(c.runs_day.cancelled) }}</td>
+                <td class="num vx-mono" data-label="Lines, hour">{{ n(c.messages_logged.hour) }}</td>
+                <td class="num vx-mono" data-label="Lines, day">{{ n(c.messages_logged.day) }}</td>
+                <td class="num vx-mono" data-label="Bot sent, day">{{ n(c.messages_sent.day) }}</td>
+                <td class="num vx-mono" data-label="Runs ran">{{ n(c.runs_day.ok) }}</td>
+                <td class="num vx-mono" data-label="Failed">{{ n(c.runs_day.failed) }}</td>
+                <td class="num vx-mono" data-label="Held back">{{ n(c.runs_day.cancelled) }}</td>
               </template>
               <td v-else colspan="6" class="vx-muted">No counts for this channel.</td>
             </tr>
@@ -55,6 +55,9 @@ const n = (value: number) => value.toLocaleString()
 </template>
 
 <style scoped>
+/* A data page: the table takes the full width, only the prose keeps the reading measure. */
+.doc { max-width: none; }
+.doc > p { max-width: 52rem; }
 .num { text-align: right; white-space: nowrap; }
 .name { max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .small { font-size: 12px; }
