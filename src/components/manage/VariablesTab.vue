@@ -12,6 +12,7 @@ import { reachesRole } from '@/lib/access'
 import { admin, type ChannelNamespace, type NamespacedVariable, type Variable } from '@/lib/admin'
 import type { Role } from '@/lib/api'
 import { shown, typedValue } from '@/lib/format'
+import { latest } from '@/lib/latest'
 import { session } from '@/lib/session'
 import { useAct } from '@/lib/useAct'
 import UserRef from '../UserRef.vue'
@@ -103,7 +104,10 @@ const otherColumns = computed(() => [
 ])
 const bare = (s: string) => s.trim().replace(/^@/, '').toLowerCase()
 
+// One guard for both loaders: starting any load (or switching view) makes older responses stale.
+const run = latest()
 async function loadOther(more = false) {
+  const live = run()
   if (view.value === 'channel' || view.value === 'top') return
   other.loading = true
   other.error = null
@@ -117,12 +121,13 @@ async function loadOther(more = false) {
       limit: PAGE,
       offset: more ? other.rows.length : 0,
     })
+    if (!live()) return
     other.rows = more ? [...other.rows, ...found.variables] : found.variables
     other.more = found.has_more
   } catch (e) {
-    other.error = e
+    if (live()) other.error = e
   } finally {
-    other.loading = false
+    if (live()) other.loading = false
   }
 }
 function show() {
@@ -132,7 +137,9 @@ function show() {
 }
 watch([view, () => props.login], () => {
   other.rows = []
+  other.loading = false
   top.rows = null
+  top.loading = false
   show()
 })
 const prefix = (ns: string) => `${ns}.`
@@ -155,16 +162,18 @@ const COUNTS = [5, 10, 25].map((n) => ({ value: String(n), label: `Top ${n}` }))
 const count = ref('10')
 const top = reactive<{ rows: { rank: number; chatter_id: string; chatter_login: string | null; value: unknown }[] | null; loading: boolean; error: unknown }>({ rows: null, loading: false, error: null })
 async function loadTop() {
+  const live = run()
   const wanted = bare(filter.name).replace(/^channel\.chatter\./, '')
   if (!wanted) return
   top.loading = true
   top.error = null
   try {
-    top.rows = (await admin.variableTop(props.login, wanted, Number(count.value))).top
+    const found = (await admin.variableTop(props.login, wanted, Number(count.value))).top
+    if (live()) top.rows = found
   } catch (e) {
-    top.error = e
+    if (live()) top.error = e
   } finally {
-    top.loading = false
+    if (live()) top.loading = false
   }
 }
 </script>
