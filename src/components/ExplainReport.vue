@@ -44,7 +44,7 @@ const from = (inv: ExplainInvocation) => (inv.owner ? `${inv.source} by ${inv.ow
               <td class="vx-tabular">{{ wait(inv) > 0 ? `${wait(inv).toFixed(0)}s left` : 'ready' }}</td>
               <td>{{ inv.input_mode }}</td>
               <td>
-                <template v-for="(ph, i) in inv.placeholders" :key="ph.reference"><template v-if="i">, </template><code>{{ ph.reference }}</code><span v-if="!ph.available" class="bad"> not here<template v-if="ph.has_fallback">, falls back</template></span></template>
+                <template v-for="(ph, i) in inv.placeholders" :key="`${i}:${ph.reference}`"><template v-if="i">, </template><code>{{ ph.reference }}</code><span v-if="!ph.available" class="bad"> not here<template v-if="ph.has_fallback">, falls back</template></span></template>
                 <span v-if="!inv.placeholders.length" class="vx-muted">none</span>
               </td>
             </tr>
@@ -58,7 +58,7 @@ const from = (inv: ExplainInvocation) => (inv.owner ? `${inv.source} by ${inv.ow
           <table class="vx-table is-stack">
             <thead><tr><th>Variable</th><th>How</th><th>Allowed</th></tr></thead>
             <tbody>
-              <tr v-for="s in report.stores" :key="s.variable">
+              <tr v-for="(s, i) in report.stores" :key="`${i}:${s.variable}`">
                 <td><code>{{ s.variable }}</code></td>
                 <td>{{ s.append ? 'append' : 'set' }}</td>
                 <td><VxChip :tone="s.allowed ? 'ok' : 'bad'">{{ s.allowed ? 'yes' : 'no: the write would go nowhere' }}</VxChip></td>

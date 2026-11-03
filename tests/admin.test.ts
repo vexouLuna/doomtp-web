@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { admin, readIgnored } from '../src/lib/admin'
+import { admin, health, readIgnored } from '../src/lib/admin'
 import { ProblemError } from '@vex/platform-web'
 import { auth, request } from '../src/lib/api'
 
@@ -45,6 +45,13 @@ describe('request', () => {
       }),
     )
     await expect(admin.audit(20, { cursor: 'x' })).rejects.toThrow('bad cursor')
+  })
+
+  it('turns a 200 reply that is not JSON into a ProblemError', async () => {
+    stub(new Response('<html>spa</html>', { status: 200 }))
+    await expect(request('/site')).rejects.toBeInstanceOf(ProblemError)
+    stub(new Response('<html>spa</html>', { status: 200 }))
+    await expect(health()).rejects.toBeInstanceOf(ProblemError)
   })
 
   it('keeps Retry-After on a 429', async () => {

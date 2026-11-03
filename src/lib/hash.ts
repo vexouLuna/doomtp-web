@@ -6,7 +6,14 @@
 const PATIENCE = 10_000
 let watching: MutationObserver | null = null
 
-const target = (hash: string) => document.getElementById(decodeURIComponent(hash.slice(1)))
+const target = (hash: string) => {
+  const raw = hash.slice(1)
+  try {
+    return document.getElementById(decodeURIComponent(raw))
+  } catch {
+    return document.getElementById(raw) // a malformed escape (#%): look the text up as it is
+  }
+}
 
 /** html's scroll-padding-top, read at scroll time; the router's own scroll (window.scrollTo) doesn't apply it. */
 const clearance = () => parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0
