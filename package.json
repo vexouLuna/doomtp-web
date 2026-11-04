@@ -11,8 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@vex/platform-web": "github:vexouLuna/vex-platform-web#v0.14.3",
-    "@vex/ui": "github:vexouLuna/vex-ui#v0.36.1",
+    "@vex/platform-web": "github:vexouLuna/vex-platform-web#v0.15.0",
+    "@vex/ui": "github:vexouLuna/vex-ui#v0.36.2",
     "vue": "^3.5.44",
     "vue-router": "^4.6.4"
   },
