@@ -1,7 +1,7 @@
 // The managing half of the bot's JSON API (ADR-0016, ADR-0026): the session, a channel's settings and logs, and
 // the bot's own. Every call needs the session cookie; writes also send its CSRF token (see `auth` in api.ts).
 import type { ChannelCommand, CommandRulePatch } from './modules'
-import type { AuditOut } from '@vex/platform-web'
+import { ProblemError, type AuditOut } from '@vex/platform-web'
 import type { LogCoverage, LogEntry, LogQuery } from '@vex/platform-web/chat'
 import { request, type CustomCommand, type ExplainReport, type Publication } from './api'
 
@@ -708,6 +708,10 @@ export interface GlobalCommand {
 /** /readyz lives outside /api/v1, and answers 503 with the same body when something is down. */
 export async function health(): Promise<Health> {
   const response = await fetch('/readyz', { headers: { accept: 'application/json' } })
-  return (await response.json()) as Health
+  try {
+    return (await response.json()) as Health
+  } catch {
+    throw new ProblemError(response.status, { detail: 'The bot sent a reply that is not JSON.' })
+  }
 }
 

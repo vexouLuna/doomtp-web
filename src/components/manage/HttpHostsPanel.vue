@@ -57,8 +57,12 @@ const clearSecret = (h: HttpHost) => act(`clear:${h.pattern}`, () => admin.clear
 
 // ── rate limits ──
 const limits = reactive<Record<keyof HttpLimits, string | number>>({ channel_per_minute: '', host_per_minute: '' })
-watch(data, (d) => {
-  if (d) Object.assign(limits, { channel_per_minute: String(d.limits.channel_per_minute), host_per_minute: String(d.limits.host_per_minute) })
+// A reload (after adding a host, say) refreshes only the fields the user hasn't edited.
+watch(data, (d, old) => {
+  if (!d) return
+  for (const k of ['channel_per_minute', 'host_per_minute'] as const) {
+    if (!old || limits[k] === String(old.limits[k])) limits[k] = String(d.limits[k])
+  }
 })
 const limitsPatch = computed<Partial<HttpLimits>>(() => {
   const out: Partial<HttpLimits> = {}

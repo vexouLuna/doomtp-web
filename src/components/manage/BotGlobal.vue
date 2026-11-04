@@ -154,7 +154,9 @@ function unpublish() {
   const u = unpublishing.value
   if (!u) return
   const run = u.kind === 'command' ? () => admin.unpublishGlobal(u.name) : () => admin.unpublishGlobalPack(u.name, u.owner)
-  act('unpublish', run, `${u.name} taken down everywhere`).then(() => (unpublishing.value = null))
+  act('unpublish', run, `${u.name} taken down everywhere`).then((ok) => {
+    if (ok) unpublishing.value = null
+  })
 }
 </script>
 

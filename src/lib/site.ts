@@ -10,7 +10,10 @@ let loading: Promise<Site | null> | null = null
 /** Loads /api/v1/site once; later calls share the same answer. */
 export function loadSite(): Promise<Site | null> {
   loading ??= api.site().then(
-    (info) => (site.info = info),
+    (info) => {
+      site.error = null
+      return (site.info = info)
+    },
     (e: unknown) => {
       site.error = errorText(e)
       loading = null // let the next page try again
