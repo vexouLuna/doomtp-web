@@ -2,7 +2,7 @@
 // The header's account control. One sign-in: when the bot offers Twitch sign-in, "Sign in" goes through the bot,
 // which (with the vexoul.net account as its provider, ADR-0023) signs in to the account and makes the bot session in
 // one trip. Otherwise it's the shared account alone (src/lib/account.ts). Signing out ends both.
-import { VxAccountMenu, VxMenuItem, VxTwitchGlyph } from '@vex/ui'
+import { VxAccountMenu, VxMenuItem, VxTwitchGlyph, useToast } from '@vex/ui'
 import type { AccountUser } from '@vex/ui'
 import { useAccount } from '@vex/ui/account'
 import { computed } from 'vue'
@@ -10,6 +10,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { logout, session, twitchLoginUrl } from '@/lib/session'
 
 const account = useAccount()
+const toast = useToast()
 const route = useRoute()
 const router = useRouter()
 
@@ -36,7 +37,10 @@ async function signOut() {
   } catch {
     // the session is dropped here either way
   }
-  if (account.user.value) await account.signOut({ everywhere: true })
+  if (account.user.value && !(await account.signOut({ everywhere: true }))) {
+    toast.show("Couldn't sign you out of your account. Try again.", { kind: 'error', duration: 5000 })
+    return
+  }
   if (route.path.startsWith('/manage')) router.push('/')
 }
 </script>
