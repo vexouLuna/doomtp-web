@@ -1,0 +1,1 @@
+import{S as u,a1 as f,a2 as i}from"./index-DT0gWm4K.js";function w(t){const n=i(),a=f(new Set);async function e(o,r,s){a.add(o);try{return await r(),n.show(s),await t(),!0}catch(c){return n.show(u(c),{kind:"error",duration:5e3}),!1}finally{a.delete(o)}}return{busy:a,act:e}}const l=t=>t?"on":"off";export{l as o,w as u};
