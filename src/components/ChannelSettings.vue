@@ -168,7 +168,7 @@ const ROLE_FIELDS: [keyof Form, string, string][] = [
       </div>
     </div>
 
-    <VxSaveBar class="bar" undo-label="Reset" :count="Object.keys(patch).length" :saving="state.busy" :error="state.error" submit @undo="reset" />
+    <VxSaveBar class="bar" undo-label="Reset" :count="Object.keys(patch).length" :saving="state.busy" :error="state.error" error-dismissable submit @undo="reset" @dismiss-error="state.error = null" />
   </form>
 </template>
 
