@@ -57,7 +57,7 @@ async function submit() {
     <form class="login vx-panel" @submit.prevent="submit">
       <div class="vx-eyebrow">dtp.vexoul.net</div>
       <h1 class="vx-display">Sign in</h1>
-      <VxCallout v-if="signinError" tone="error">{{ signinError }}</VxCallout>
+      <VxCallout v-if="signinError" tone="error" dismissable @dismiss="router.replace({ query: { ...route.query, error: undefined } })">{{ signinError }}</VxCallout>
       <VxCallout v-else-if="session.notice && !error" tone="warn">{{ session.notice }}</VxCallout>
       <VxCallout v-if="session.checked && !offered" tone="warn" title="Sign-in is off">
         Twitch sign-in isn't set up on the bot, and the admin password isn't offered here: either none is set

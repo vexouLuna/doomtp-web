@@ -105,7 +105,7 @@ async function submit() {
       </div>
     </form>
 
-    <VxCallout v-if="error" tone="error" title="Couldn't explain that" class="result">{{ error }}</VxCallout>
+    <VxCallout v-if="error" tone="error" title="Couldn't explain that" class="result" dismissable @dismiss="error = null">{{ error }}</VxCallout>
     <section v-else-if="report" class="result doc">
       <p v-if="checkedAs" class="vx-muted">Checked as <b>{{ checkedAs }}</b>.</p>
       <ExplainReport :report="report" />
