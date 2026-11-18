@@ -41,8 +41,7 @@ const rows = shallowRef<Row[]>([])
 const emotes = shallowRef<EmoteSet | null>(null)
 const badges = shallowRef<RawBadges | null>(null)
 const pronouns = ref<Record<string, string>>({})
-const lookup = createPronouns()
-const asked = new Set<string>()
+const lookup = createPronouns(props.login)
 
 function apply(e: FeedEvent) {
   const now = Date.now()
@@ -114,16 +113,16 @@ onBeforeUnmount(() => {
   document.body.style.cssText = saved.body
 })
 
-// Pronouns: each chatter's login is asked once, and only while the setting is on.
+// Pronouns, from the bot (lib/pronouns.ts batches and caches the asking), only while the setting is on.
 watch(
   [rows, () => s.value.pronouns],
   ([list, on]) => {
     if (!on) return
     for (const r of list) {
       const login = r.entry.user?.login
-      if (!login || asked.has(login)) continue
-      asked.add(login)
-      lookup(login).then((p) => p && (pronouns.value = { ...pronouns.value, [login]: p }))
+      const key = login?.toLowerCase()
+      if (!key || key in pronouns.value) continue
+      lookup(key).then((p) => p && (pronouns.value = { ...pronouns.value, [key]: p }))
     }
   },
   { flush: 'post' },
@@ -158,7 +157,7 @@ const style = computed(() => ({
       :names="s.names"
       colors="readable"
     >
-      <template #before><span v-if="s.pronouns && l.login && pronouns[l.login]" class="pn">{{ pronouns[l.login] }}</span></template>
+      <template #before><span v-if="s.pronouns && l.login && pronouns[l.login.toLowerCase()]" class="pn">{{ pronouns[l.login.toLowerCase()] }}</span></template>
     </ChatLine>
   </main>
 </template>

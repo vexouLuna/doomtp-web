@@ -1,42 +1,64 @@
-// Pronouns from alejo.io's service, the one the Twitch Chat Pronouns browser extension (and Chatterino's and FFZ's
-// pronoun add-ons) read: https://api.pronouns.alejo.io/v1. The service publishes no written API reference or terms,
-// so what this relies on is what it answers (checked 2026-11-18):
-//   GET /v1/pronouns            -> { <id>: { name, subject, object, singular } }, one table
-//   GET /v1/users/{login}       -> { channel_id, channel_login, pronoun_id, alt_pronoun_id }, or 404 for nobody
-// Only the chatter's login is sent, once per chatter per session, from the viewer's browser (OBS). Never called unless
-// the overlay's `pronouns` setting is on; any failure means no pronouns, quietly.
-const BASE = 'https://api.pronouns.alejo.io/v1'
+// Chatters' pronouns from the bot: GET /api/v2/channels/{login}/pronouns?user=a&user=b (doomtp-bot ADR-0039), readable
+// by anyone while the channel's public log is on, like the live feed. The bot asks the pronouns service; the browser
+// sends only the channel's own address, never a third party's.
+//   200 { items: [{ login, status: 'set' | 'none' | 'unknown', display }] }, one item per distinct login asked.
+// A public request is one of the log's 30 reads a minute per address, so lookups are batched (a short wait, at most 50
+// logins a request) and answered once per chatter for the page's life. `unknown` (the service didn't answer) and any
+// failure leave the chatter without pronouns and are asked again no sooner than a minute later. Never throws.
+const WAIT_MS = 300
+const RETRY_MS = 60_000
+const MAX_USERS = 50
+const LOGIN = /^[A-Za-z0-9_]{1,25}$/
 
-interface Pronoun {
-  subject: string
-  object: string
-  singular: boolean
+interface Item {
+  login: string
+  status: 'set' | 'none' | 'unknown'
+  display: string | null
 }
-type Table = Record<string, Pronoun>
 
-/** "He/Him"; a singular one ("Any", "Other") stands alone. */
-export const show = (p: Pronoun): string => (p.singular ? p.subject : `${p.subject}/${p.object}`)
+export function createPronouns(channel: string, fetcher: typeof fetch = (...a) => fetch(...a), now: () => number = Date.now) {
+  /** Settled answers: a string, or null for "none". */
+  const known = new Map<string, string | null>()
+  /** Logins not to ask about again before this time (ms). */
+  const retryAt = new Map<string, number>()
+  const waiting = new Map<string, ((v: string | null) => void)[]>()
+  let timer: ReturnType<typeof setTimeout> | undefined
 
-export function createPronouns(fetcher: typeof fetch = (...a) => fetch(...a)) {
-  let table: Promise<Table | null> | null = null
-  const cache = new Map<string, Promise<string | null>>()
-  const getTable = () =>
-    (table ??= fetcher(`${BASE}/pronouns`)
-      .then((r) => (r.ok ? (r.json() as Promise<Table>) : null))
-      .catch(() => null))
-
-  async function load(login: string): Promise<string | null> {
-    const [pronouns, res] = await Promise.all([getTable(), fetcher(`${BASE}/users/${encodeURIComponent(login)}`)])
-    if (!pronouns || !res.ok) return null
-    const u = (await res.json()) as { pronoun_id?: string | null; alt_pronoun_id?: string | null }
-    const names = [u.pronoun_id, u.alt_pronoun_id].flatMap((id) => (id && pronouns[id] ? [show(pronouns[id])] : []))
-    return names.length ? names.join(' · ') : null
+  async function flush() {
+    timer = undefined
+    const batch = [...waiting.keys()].slice(0, MAX_USERS)
+    const done = new Map(batch.map((l) => [l, waiting.get(l)!]))
+    for (const l of batch) waiting.delete(l)
+    if (waiting.size) timer = setTimeout(flush, 0)
+    const settle = (login: string, v: string | null) => done.get(login)?.forEach((r) => r(v))
+    let items: Item[] = []
+    try {
+      const q = new URLSearchParams()
+      for (const l of batch) q.append('user', l)
+      const res = await fetcher(`/api/v2/channels/${encodeURIComponent(channel)}/pronouns?${q}`, { credentials: 'same-origin' })
+      if (res.ok) items = ((await res.json()) as { items?: Item[] }).items ?? []
+    } catch {
+      // answered below as "no pronouns, ask later"
+    }
+    const byLogin = new Map(items.map((i) => [String(i.login).toLowerCase(), i]))
+    for (const l of batch) {
+      const i = byLogin.get(l)
+      if (i?.status === 'set' && i.display) known.set(l, i.display)
+      else if (i?.status === 'none') known.set(l, null)
+      else retryAt.set(l, now() + RETRY_MS)
+      settle(l, known.get(l) ?? null)
+    }
   }
-  /** A chatter's pronouns, or null. Asked once per login for the page's life. */
+
+  /** A chatter's pronouns, or null (none, unknown, an error, or not yet allowed to ask again). */
   return (login: string): Promise<string | null> => {
+    if (!LOGIN.test(login)) return Promise.resolve(null)
     const key = login.toLowerCase()
-    let hit = cache.get(key)
-    if (!hit) cache.set(key, (hit = load(key).catch(() => null)))
-    return hit
+    if (known.has(key)) return Promise.resolve(known.get(key)!)
+    if ((retryAt.get(key) ?? 0) > now()) return Promise.resolve(null)
+    return new Promise((resolve) => {
+      waiting.set(key, [...(waiting.get(key) ?? []), resolve])
+      timer ??= setTimeout(flush, WAIT_MS)
+    })
   }
 }

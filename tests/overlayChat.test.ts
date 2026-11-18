@@ -132,26 +132,73 @@ describe('feed', () => {
 })
 
 describe('pronouns', () => {
-  const table = { hehim: { subject: 'He', object: 'Him', singular: false }, any: { subject: 'Any', object: 'Any', singular: true } }
-  const fetcher = (users: Record<string, unknown>) =>
+  const reply = (items: unknown[]) => new Response(JSON.stringify({ items, next_cursor: null }))
+  /** A stand-in for the bot's route: alice has pronouns, pest none, carol is unknown. */
+  const bot = () =>
     vi.fn(async (url: string | URL | Request) => {
-      const u = String(url)
-      if (u.endsWith('/pronouns')) return new Response(JSON.stringify(table))
-      const login = decodeURIComponent(u.split('/users/')[1]!)
-      return login in users ? new Response(JSON.stringify(users[login])) : new Response('not_found', { status: 404 })
+      const users = new URL(String(url), 'http://x').searchParams.getAll('user').map((u) => u.toLowerCase())
+      return reply(users.map((login) => ({ login, status: login === 'alice' ? 'set' : login === 'carol' ? 'unknown' : 'none', display: login === 'alice' ? 'She/Her' : null })))
     })
-  it('shows pronouns, an alternate one, and asks once per login', async () => {
-    const f = fetcher({ a: { pronoun_id: 'hehim', alt_pronoun_id: 'any' }, b: { pronoun_id: null, alt_pronoun_id: null } })
-    const get = createPronouns(f as unknown as typeof fetch)
-    expect(await get('a')).toBe('He/Him · Any')
-    expect(await get('A')).toBe('He/Him · Any')
-    expect(await get('b')).toBeNull()
-    expect(await get('nobody')).toBeNull()
-    expect(f.mock.calls.filter(([u]) => String(u).endsWith('/users/a'))).toHaveLength(1)
-    expect(f.mock.calls.filter(([u]) => String(u).endsWith('/pronouns'))).toHaveLength(1)
+  const setup = (f = bot()) => ({ f, get: createPronouns('vexouluna', f as unknown as typeof fetch, () => Date.now()) })
+  const asked = (f: ReturnType<typeof bot>) => f.mock.calls.map(([u]) => new URL(String(u), 'http://x'))
+
+  it('batches chatters into one request to the bot and shows what is set', async () => {
+    vi.useFakeTimers()
+    const { f, get } = setup()
+    const all = Promise.all([get('Alice'), get('pest'), get('alice'), get('bad name!')])
+    await vi.advanceTimersByTimeAsync(400)
+    expect(await all).toEqual(['She/Her', null, 'She/Her', null])
+    expect(f).toHaveBeenCalledTimes(1)
+    const url = asked(f)[0]!
+    expect(url.pathname).toBe('/api/v2/channels/vexouluna/pronouns')
+    expect(url.searchParams.getAll('user')).toEqual(['alice', 'pest'])
+    vi.useRealTimers()
   })
-  it('fails silently', async () => {
-    const get = createPronouns((() => Promise.reject(new Error('offline'))) as unknown as typeof fetch)
-    expect(await get('a')).toBeNull()
+  it('answers a chatter once, from the cache in the page', async () => {
+    vi.useFakeTimers()
+    const { f, get } = setup()
+    const first = Promise.all([get('alice'), get('pest')])
+    await vi.advanceTimersByTimeAsync(400)
+    await first
+    expect(await get('alice')).toBe('She/Her')
+    expect(await get('pest')).toBeNull()
+    await vi.advanceTimersByTimeAsync(400)
+    expect(f).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
+  })
+  it('sends at most 50 logins a request', async () => {
+    vi.useFakeTimers()
+    const { f, get } = setup()
+    const all = Promise.all(Array.from({ length: 120 }, (_, i) => get(`user${i}`)))
+    await vi.advanceTimersByTimeAsync(400)
+    await all
+    expect(asked(f).map((u) => u.searchParams.getAll('user').length)).toEqual([50, 50, 20])
+    vi.useRealTimers()
+  })
+  it('leaves an unknown or failed lookup without pronouns and asks again only after a minute', async () => {
+    vi.useFakeTimers()
+    const { f, get } = setup()
+    const a = get('carol')
+    await vi.advanceTimersByTimeAsync(400)
+    expect(await a).toBeNull()
+    expect(await get('carol')).toBeNull()
+    await vi.advanceTimersByTimeAsync(400)
+    expect(f).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(61_000)
+    const b = get('carol')
+    await vi.advanceTimersByTimeAsync(400)
+    await b
+    expect(f).toHaveBeenCalledTimes(2)
+    vi.useRealTimers()
+  })
+  it('fails silently on an error status or a network error', async () => {
+    vi.useFakeTimers()
+    for (const f of [vi.fn(async () => new Response('{}', { status: 429 })), vi.fn(async () => { throw new Error('offline') })]) {
+      const { get } = setup(f as unknown as ReturnType<typeof bot>)
+      const p = get('alice')
+      await vi.advanceTimersByTimeAsync(400)
+      expect(await p).toBeNull()
+    }
+    vi.useRealTimers()
   })
 })

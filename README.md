@@ -69,12 +69,13 @@ vexoul.net/obs_sources builds the link. By hand, every setting is optional and b
 | `shadow` | `on` | `0`/`off` drops the text shadow |
 | `p` | | a saved preset's public id on vex-auth, in place of the settings above |
 
-**Pronouns.** With `pronouns=1` the page asks <https://api.pronouns.alejo.io/v1> (the service the Twitch Chat Pronouns
-extension uses) from the browser OBS runs: one request for its table of pronouns, then one `GET /v1/users/<login>` per
-chatter, once per chatter while the source is open. What that service receives is each chatter's Twitch login (and the
-usual request metadata: the streamer's IP address); no message text, no channel. A failure shows no pronouns and nothing
-else. The service publishes no written API reference or terms: this relies on what it answers. With the setting off
-(the default) nothing is sent.
+**Pronouns.** With `pronouns=1` the page asks the bot, not a third party: `GET /api/v2/channels/{login}/pronouns?user=a&user=b`
+(doomtp-bot ADR-0039), readable like the live feed while the channel's public log is on. The browser sends only the
+chatters' logins to the bot (the same origin), batched into one request per 300 ms (at most 50 logins) and answered once
+per chatter while the source is open, so the 30 public log reads a minute per address are not spent. The bot asks the
+pronouns service. A chatter with none, a lookup the service didn't answer, or any error shows no pronouns and nothing
+else; an unanswered one is asked again no sooner than a minute later. With the setting off (the default) the
+page never asks.
 
 ### Manage
 
