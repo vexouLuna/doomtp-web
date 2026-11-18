@@ -55,6 +55,12 @@ export interface ApiKey {
 
 export type SlurLevel = 'base' | 'strict' | 'strictest'
 
+/** An extra sign that forwards the listed commands (or all) to the channel's own sign, at the start of a line. */
+export interface AltPrefix {
+  prefix: string
+  commands: string[] | 'all'
+}
+
 export interface Channel {
 
   channel_id: string
@@ -65,6 +71,8 @@ export interface Channel {
   tier: string
   capabilities: string[]
   prefix: string
+  /** Older bots don't send it; the editor is hidden then. */
+  alt_prefixes?: AltPrefix[]
   timezone: string
   log_enabled: boolean
   history_backfill: boolean
@@ -84,6 +92,7 @@ export interface Channel {
 }
 export type ChannelPatch = Partial<{
   prefix: string
+  alt_prefixes: AltPrefix[]
   quiet_errors: boolean
   cc_edit_notice: boolean
   log_enabled: boolean

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 // A channel's settings as a form: only what changed is sent, as one PATCH, the same change `config` makes in chat.
-import { VxField, VxInput, VxSegmented, VxSelect, VxStepper, VxSaveBar, VxSwitch, useToast } from '@vex/ui'
+import { VxButton, VxCheckbox, VxField, VxInput, VxSegmented, VxSelect, VxStepper, VxSaveBar, VxSwitch, useToast } from '@vex/ui'
 import { computed, reactive, shallowRef, watch } from 'vue'
 import { can } from '@/lib/access'
-import { admin, type Channel, type ChannelPatch } from '@/lib/admin'
+import { admin, type AltPrefix, type Channel, type ChannelPatch } from '@/lib/admin'
 import { errorText } from '@vex/platform-web'
 import { syncForm } from '@/lib/syncForm'
 
@@ -11,8 +11,18 @@ const props = defineProps<{ channel: Channel; roles: string[] }>()
 const emit = defineEmits<{ saved: [channel: Channel] }>()
 const toast = useToast()
 
+// The alternates as rows the form edits; kept as one JSON string so "changed" is a plain comparison.
+interface AltRow { prefix: string; commands: string; all: boolean }
+// One key order everywhere, so equal rows make equal strings.
+const altRow = (r: AltRow): AltRow => ({ prefix: r.prefix, commands: r.all ? '' : r.commands, all: r.all })
+const altRows = (list: AltPrefix[] = []): string =>
+  JSON.stringify(list.map((a) => altRow({ prefix: a.prefix, all: a.commands === 'all', commands: a.commands === 'all' ? '' : a.commands.join(' ') })))
+const altList = (rows: AltRow[]): AltPrefix[] =>
+  rows.map((r) => ({ prefix: r.prefix.trim(), commands: r.all ? 'all' : r.commands.split(/[\s,]+/).filter(Boolean) }))
+
 const fromChannel = (c: Channel) => ({
   prefix: c.prefix,
+  alt_prefixes: altRows(c.alt_prefixes),
   log_enabled: c.log_enabled,
   history_backfill: c.history_backfill,
   // Older bots don't know it; the switch is hidden then, so it's never sent.
@@ -50,10 +60,18 @@ const patch = computed<ChannelPatch>(() => {
   for (const key of Object.keys(form) as (keyof Form)[]) {
     if (form[key] === saved.value[key]) continue
     if (key === 'error_replies') out.quiet_errors = !form.error_replies
+    else if (key === 'alt_prefixes') out.alt_prefixes = altList(alts.value)
     else out[key] = form[key]
   }
   return out as ChannelPatch
 })
+const alts = computed<AltRow[]>(() => JSON.parse(form.alt_prefixes))
+function editAlts(change: (rows: AltRow[]) => void) {
+  const rows = alts.value.map((r) => ({ ...r }))
+  change(rows)
+  form.alt_prefixes = JSON.stringify(rows.map(altRow))
+}
+const MAX_ALTS = 5
 const dirty = computed(() => Object.keys(patch.value).length > 0)
 const state = reactive({ busy: false, error: null as string | null })
 
@@ -61,6 +79,11 @@ async function save() {
   if (!dirty.value || state.busy) return
   if (!form.prefix.trim()) {
     state.error = 'The sign can’t be empty.'
+    return
+  }
+  const blank = alts.value.find((r) => !r.prefix.trim() || (!r.all && !r.commands.trim()))
+  if (blank) {
+    state.error = 'Each extra sign needs a sign and its commands (or All).'
     return
   }
   state.busy = true
@@ -121,6 +144,43 @@ const ROLE_FIELDS: [keyof Form, string, string][] = [
       <VxField label="Command sign" help="What starts a command here: a character or an emoji.">
         <template #default="{ id }"><VxInput :id="id" v-model="form.prefix" mono class="sign" /></template>
       </VxField>
+      <VxField
+        v-if="channel.alt_prefixes !== undefined"
+        label="Extra signs"
+        help="At the start of a message, an extra sign runs the commands you list as if typed with the main sign. Inside commands, triggers and help only the main sign counts."
+      >
+        <template #default>
+          <div class="alts">
+            <div v-for="(row, i) in alts" :key="i" class="alt">
+              <VxInput
+                :model-value="row.prefix"
+                mono
+                class="sign"
+                :aria-label="`Extra sign ${i + 1}`"
+                placeholder="?"
+                @update:model-value="(v: string | number) => editAlts((rows) => (rows[i]!.prefix = String(v)))"
+              />
+              <VxInput
+                :model-value="row.all ? '' : row.commands"
+                mono
+                class="grow"
+                :disabled="row.all"
+                :aria-label="`Commands for extra sign ${i + 1}`"
+                :placeholder="row.all ? 'every command' : 'ping so quote'"
+                @update:model-value="(v: string | number) => editAlts((rows) => (rows[i]!.commands = String(v)))"
+              />
+              <VxCheckbox :model-value="row.all" label="All" @update:model-value="(on: boolean) => editAlts((rows) => (rows[i]!.all = on))" />
+              <VxButton size="sm" variant="ghost" :aria-label="`Remove extra sign ${i + 1}`" @click="editAlts((rows) => rows.splice(i, 1))">Remove</VxButton>
+            </div>
+            <VxButton
+              v-if="alts.length < MAX_ALTS"
+              size="sm"
+              class="add"
+              @click="editAlts((rows) => rows.push({ prefix: '', commands: '', all: false }))"
+            >Add extra sign</VxButton>
+          </div>
+        </template>
+      </VxField>
       <VxSwitch v-model="form.error_replies" label="Error replies: say why a command failed" />
       <VxSwitch v-model="form.cc_edit_notice" label="Edit notices: say when a custom command changes" />
       <VxField label="Reply hold" help="Wait this long before replying, so the reply lands after the message it answers.">
@@ -178,6 +238,11 @@ const ROLE_FIELDS: [keyof Form, string, string][] = [
 .group h3 { margin: 0; }
 .group h3:not(:first-child) { margin-top: 6px; }
 .sign { max-width: 8rem; }
+.alts { display: grid; gap: 8px; }
+.alt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.alt .sign { width: 5rem; flex: none; }
+.alt .grow { flex: 1 1 10rem; min-width: 0; }
+.add { justify-self: start; }
 .role { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; }
 .role code { display: block; }
 .role code { font-size: 12px; }
