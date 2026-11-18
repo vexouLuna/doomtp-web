@@ -20,15 +20,15 @@ export interface OverlaySettings {
   history: number
   /** Subs, raids and the like, as lines. */
   notices: boolean
-  /** Messages that are commands (`!so someone`). */
-  commands: boolean
+  /** Leave out messages that are commands (`!so someone`). */
+  hideCommands: boolean
   shadow: boolean
   names: 'display' | 'login' | 'both'
 }
 
 export const DEFAULTS: OverlaySettings = {
   size: 24, emote: 0, color: 'chatter', badges: true, pronouns: false, lines: 20, fade: 0, history: 0,
-  notices: false, commands: false, shadow: true, names: 'display',
+  notices: false, hideCommands: false, shadow: true, names: 'display',
 }
 
 const get = (q: URLSearchParams | Record<string, unknown>, k: string): string | null => {
@@ -60,7 +60,7 @@ export function parseSettings(q: URLSearchParams | Record<string, unknown>): Ove
     fade: fade === 0 ? 0 : Math.max(5, fade),
     history: int(get(q, 'history'), 0, 100, DEFAULTS.history),
     notices: flag(get(q, 'notices'), DEFAULTS.notices),
-    commands: flag(get(q, 'commands'), DEFAULTS.commands),
+    hideCommands: flag(get(q, 'hidecommands'), DEFAULTS.hideCommands),
     shadow: flag(get(q, 'shadow'), DEFAULTS.shadow),
     names: names === 'login' || names === 'both' ? names : 'display',
   }

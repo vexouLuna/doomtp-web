@@ -10,10 +10,13 @@ const msg = (id: string, user = '1', extra = {}): Entry =>
 const sub = (id: string, user = '1'): Entry => ({ kind: 'notification', id, user: { id: user, login: 'x' }, type: 'sub', payload: {}, at: '', source: '' }) as unknown as Entry
 
 describe('settings', () => {
-  it('defaults when the link carries nothing', () => expect(parseSettings(new URLSearchParams())).toEqual(DEFAULTS))
+  it('defaults when the link carries nothing, commands shown', () => {
+    expect(parseSettings(new URLSearchParams())).toEqual(DEFAULTS)
+    expect(DEFAULTS.hideCommands).toBe(false)
+  })
   it('reads each setting', () => {
-    const s = parseSettings(new URLSearchParams('size=40&emote=60&color=FF8800&badges=off&pronouns=1&lines=5&fade=30&history=10&notices=1&commands=1&shadow=0&names=both'))
-    expect(s).toEqual({ size: 40, emote: 60, color: '#ff8800', badges: false, pronouns: true, lines: 5, fade: 30, history: 10, notices: true, commands: true, shadow: false, names: 'both' })
+    const s = parseSettings(new URLSearchParams('size=40&emote=60&color=FF8800&badges=off&pronouns=1&lines=5&fade=30&history=10&notices=1&hidecommands=1&shadow=0&names=both'))
+    expect(s).toEqual({ size: 40, emote: 60, color: '#ff8800', badges: false, pronouns: true, lines: 5, fade: 30, history: 10, notices: true, hideCommands: true, shadow: false, names: 'both' })
   })
   it('bounds numbers and ignores junk', () => {
     const s = parseSettings(new URLSearchParams('size=9999&lines=0&history=-4&fade=2&emote=abc&color=red&names=x&pronouns=maybe'))

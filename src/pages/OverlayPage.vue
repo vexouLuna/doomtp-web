@@ -47,8 +47,8 @@ const asked = new Set<string>()
 function apply(e: FeedEvent) {
   const now = Date.now()
   if (e.type === 'message') {
-    // Commands (`!so x`) aren't conversation; a setting brings them back.
-    if (e.entry.is_command && !s.value.commands) return
+    // Commands (`!so x`) show unless the link says hidecommands.
+    if (e.entry.is_command && s.value.hideCommands) return
     rows.value = addRow(rows.value, e.entry, s.value.lines, now)
   } else if (e.type === 'notification') {
     if (s.value.notices) rows.value = addRow(rows.value, e.entry, s.value.lines, now)
@@ -67,7 +67,7 @@ async function loadHistory(ctl: AbortSignal) {
     const items = ((await res.json()) as { items?: Entry[] }).items ?? []
     const now = Date.now()
     const known = new Set(rows.value.map((r) => r.id))
-    const old = items.filter((m) => !known.has(m.id) && !(m.kind === 'message' && m.is_command && !s.value.commands)).reverse()
+    const old = items.filter((m) => !known.has(m.id) && !(m.kind === 'message' && m.is_command && s.value.hideCommands)).reverse()
     // Behind the live ones: they were said earlier.
     let past: Row[] = []
     for (const m of old) past = addRow(past, m, s.value.lines, now)

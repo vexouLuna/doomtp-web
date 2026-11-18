@@ -65,7 +65,7 @@ vexoul.net/obs_sources builds the link. By hand, every setting is optional and b
 | `fade` | 0 | seconds a line stays before it fades and is removed (0 keeps it; 5 to 3600) |
 | `history` | 0 | lines of the log's recent past shown at the start (0 to 100) |
 | `notices` | off | `1` shows subs, raids and the like |
-| `commands` | off | `1` shows messages that are commands (`!so someone`) |
+| `hidecommands` | off | `1` leaves out messages that are commands (`!so someone`) |
 | `shadow` | `on` | `0`/`off` drops the text shadow |
 | `p` | | a saved preset's public id on vex-auth, in place of the settings above |
 
