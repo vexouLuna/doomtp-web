@@ -30,6 +30,8 @@ const router = createRouter({
     { path: '/stats', component: () => import('./pages/StatsPage.vue'), meta: { title: 'Stats' } },
     { path: '/channels', component: () => import('./pages/ChannelsPage.vue'), meta: { title: 'Channels' } },
     { path: '/channels/:login', component: () => import('./pages/ChannelPage.vue'), props: true, meta: { title: 'Channel' } },
+    // The OBS chat overlay: a bare page for a browser source, linked from vexoul.net/obs_sources.
+    { path: '/overlay/:login', component: () => import('./pages/OverlayPage.vue'), props: true, meta: { title: 'Chat overlay' } },
     { path: '/explain/:token', component: () => import('./pages/ExplainPage.vue'), props: true, meta: { title: 'Explain report' } },
     // Manage. Every page needs a session (see src/lib/session.ts); what each shows depends on its rank.
     { path: '/manage', component: () => import('./pages/manage/OverviewPage.vue'), meta: { title: 'Manage' } },

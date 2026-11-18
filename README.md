@@ -37,8 +37,44 @@ The same URLs as the bot's own pages, so links already out there keep working (c
 | `/docs/language` | the language reference, with the bot's own editor to try a line in, and the grammar |
 | `/docs/api` | every endpoint of the JSON API, read from the bot's `/openapi.json` |
 | `/channels/:login` | a channel's sign, tier and status, and the custom commands published there |
+| `/overlay/:login` | the OBS chat overlay (below): bare, see-through, no sign-in |
 | `/explain/:token` | the report behind a chat `explain` link |
 | anything else | 404 |
+
+### The chat overlay (`/overlay/:login`)
+
+A bare, transparent page for an OBS browser source: the channel's chat as it is said. It follows the bot's live feed
+(`GET /api/v2/channels/{login}/chat/live`, server-sent events, doomtp-bot ADR-0038), which is public for a channel whose
+public chat log is on, and draws lines with the same renderer as the chat log (Twitch, 7TV, BTTV and FFZ emotes,
+badges). A deleted message, a timed-out chatter's messages and a cleared chat disappear at once. A bot that doesn't
+have the feed yet (404), or a channel that keeps its log private (401), leaves the page empty, asked again every
+5 s, then 10, 20, 40 and every minute; the page never shows an error. After the feed's `end` event a `too_slow` or
+`shutdown` reconnects, `log_private` stops. Lines missed while the connection was down are not filled in.
+
+vexoul.net/obs_sources builds the link. By hand, every setting is optional and bounded:
+
+| query | default | |
+|---|---|---|
+| `size` | 24 | text size, px (12 to 96) |
+| `emote` | 0 | emote height, px (0 is 1.4 × the text; up to 192) |
+| `color` | chatter's own | one colour for every name, `rrggbb` |
+| `names` | `display` | `display`, `login` or `both` |
+| `badges` | `on` | `off` hides badges |
+| `pronouns` | off | `1` shows pronouns (below) |
+| `lines` | 20 | the most lines on the page (1 to 100); older ones are removed from the page |
+| `fade` | 0 | seconds a line stays before it fades and is removed (0 keeps it; 5 to 3600) |
+| `history` | 0 | lines of the log's recent past shown at the start (0 to 100) |
+| `notices` | off | `1` shows subs, raids and the like |
+| `commands` | off | `1` shows messages that are commands (`!so someone`) |
+| `shadow` | `on` | `0`/`off` drops the text shadow |
+| `p` | | a saved preset's public id on vex-auth, in place of the settings above |
+
+**Pronouns.** With `pronouns=1` the page asks <https://api.pronouns.alejo.io/v1> (the service the Twitch Chat Pronouns
+extension uses) from the browser OBS runs: one request for its table of pronouns, then one `GET /v1/users/<login>` per
+chatter, once per chatter while the source is open. What that service receives is each chatter's Twitch login (and the
+usual request metadata: the streamer's IP address); no message text, no channel. A failure shows no pronouns and nothing
+else. The service publishes no written API reference or terms: this relies on what it answers. With the setting off
+(the default) nothing is sent.
 
 ### Manage
 
