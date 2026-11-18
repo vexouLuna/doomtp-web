@@ -90,6 +90,9 @@ async function save() {
   state.error = null
   try {
     const channel = await admin.patch(props.channel.login, patch.value)
+    // The bot stores the list normalized (`ping, so` → `ping so`): take its answer, or the raw text would
+    // differ from what was saved and the form would still look unsaved.
+    if (channel.alt_prefixes !== undefined) form.alt_prefixes = altRows(channel.alt_prefixes)
     toast.show('Settings saved')
     emit('saved', channel)
   } catch (e) {

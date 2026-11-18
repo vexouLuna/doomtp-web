@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
-import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { describe, expect, it, vi } from 'vitest'
+
+const patched = vi.hoisted(() => ({ reply: null as unknown }))
+vi.mock('@/lib/admin', () => ({ admin: { patch: async () => patched.reply } }))
+
 import ChannelSettings from '../src/components/ChannelSettings.vue'
 import type { Channel } from '../src/lib/admin'
 
@@ -78,5 +82,27 @@ describe('ChannelSettings extra signs after a save', () => {
     expect(vm.patch).toEqual({ alt_prefixes: [{ prefix: '$', commands: 'all' }] })
     await w.setProps({ channel: { ...channel(), alt_prefixes: [{ prefix: '$', commands: 'all' }] } })
     expect(vm.patch).toEqual({})
+  })
+})
+
+describe('ChannelSettings extra signs, saved as the bot normalizes them', () => {
+  it('shows nothing unsaved after a save of commas, spaces and capitals', async () => {
+    const c = { ...channel(), alt_prefixes: [{ prefix: '?', commands: ['ping'] }] }
+    const w = mount(ChannelSettings, { props: { channel: c, roles: ['mod'] } })
+    const cmds = w.findAllComponents({ name: 'VxInput' }).find((i) => i.props('modelValue') === 'ping')!
+    cmds.vm.$emit('update:modelValue', 'Ping, so  quote ')
+    w.findAllComponents({ name: 'VxInput' })[1]!.vm.$emit('update:modelValue', ' ? ')
+    await w.vm.$nextTick()
+    const vm = w.vm as unknown as { patch: Record<string, unknown> }
+    expect(vm.patch).toEqual({ alt_prefixes: [{ prefix: '?', commands: ['Ping', 'so', 'quote'] }] })
+
+    const answer = { ...c, alt_prefixes: [{ prefix: '?', commands: ['ping', 'so', 'quote'] }] }
+    patched.reply = answer
+    await w.find('form').trigger('submit')
+    await flushPromises()
+    expect(w.emitted('saved')?.[0]).toEqual([answer])
+    await w.setProps({ channel: answer }) // as the page does on `saved`
+    expect(vm.patch).toEqual({})
+    expect(w.findAllComponents({ name: 'VxInput' }).some((i) => i.props('modelValue') === 'ping so quote')).toBe(true)
   })
 })
