@@ -1,0 +1,1 @@
+import{aI as c,aJ as n}from"./index-DqPM3fwe.js";async function e(a,s={}){const t=await fetch(a,s);return t.status===401&&n.onUnauthorized?.(),t}const o=new c({base:"/api/v2",csrf:()=>n.csrf,fetch:e,credentials:"same-origin"}),f=a=>`channel:${a}`;export{f as c,o as p};
