@@ -3,7 +3,7 @@
 <!-- conventions:begin: synced from vexouLuna/conventions; edit it there, then run `conventions sync` -->
 [![CI](https://github.com/vexouLuna/doomtp-web/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/vexouLuna/doomtp-web/actions/workflows/ci.yml?query=branch%3Amain)
 [![publish](https://github.com/vexouLuna/doomtp-web/actions/workflows/publish.yml/badge.svg?branch=main)](https://github.com/vexouLuna/doomtp-web/actions/workflows/publish.yml?query=branch%3Amain)
-[![conventions v4.2.0](https://img.shields.io/badge/conventions-v4.2.0-blue)](https://github.com/vexouLuna/conventions/tree/v4.2.0)
+[![conventions v4.3.0](https://img.shields.io/badge/conventions-v4.3.0-blue)](https://github.com/vexouLuna/conventions/tree/v4.3.0)
 [![websites_dtp](https://status.vexoul.net/api/v1/endpoints/websites_dtp/health/badge.svg)](https://status.vexoul.net)
 [![websites_dtp uptime 7d](https://status.vexoul.net/api/v1/endpoints/websites_dtp/uptimes/7d/badge.svg)](https://status.vexoul.net)
 <!-- conventions:end -->
